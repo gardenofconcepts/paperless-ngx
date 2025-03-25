@@ -54,6 +54,7 @@ export const DATA_TYPE_LABELS = [
 export interface CustomField extends ObjectWithId {
   data_type: CustomFieldDataType
   name: string
+  remark?: string
   created?: Date
   extra_data?: {
     select_options?: Array<{ label: string; id: string }>

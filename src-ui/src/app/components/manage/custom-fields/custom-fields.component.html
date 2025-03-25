@@ -30,7 +30,22 @@
   @for (field of fields; track field) {
     <li class="list-group-item">
       <div class="row fade" [class.show]="show">
-        <div class="col d-flex align-items-center"><button class="btn btn-link p-0 text-start" type="button" (click)="editField(field)" [disabled]="!permissionsService.currentUserCan(PermissionAction.Change, PermissionType.CustomField)">{{field.name}}</button></div>
+        <div class="col d-flex align-items-center">
+          <button class="btn btn-link ms-0 p-0 text-start" type="button" (click)="editField(field)" [disabled]="!permissionsService.currentUserCan(PermissionAction.Change, PermissionType.CustomField)">{{field.name}}</button>
+          @if (field.remark) {
+            &nbsp;
+            <span
+              [ngbPopover]="field.remark"
+              popoverTitle="Remark"
+              placement="end"
+              container="body"
+              triggers="mouseenter:mouseleave"
+              popoverClass="popover-slim"
+            >
+              <i-bs name="chat-left-text"></i-bs>
+            </span>
+          }
+        </div>
         <div class="col d-flex align-items-center">{{getDataType(field)}}</div>
         <div class="col">
           <div class="btn-group d-block d-sm-none">

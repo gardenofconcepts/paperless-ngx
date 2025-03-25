@@ -3,6 +3,7 @@ import { Component, inject } from '@angular/core'
 import { FormsModule, ReactiveFormsModule } from '@angular/forms'
 import {
   NgbDropdownModule,
+  NgbPopoverModule,
   NgbPaginationModule,
 } from '@ng-bootstrap/ng-bootstrap'
 import { NgxBootstrapIconsModule } from 'ngx-bootstrap-icons'
@@ -32,6 +33,7 @@ import { ManagementListComponent } from '../management-list/management-list.comp
     NgClass,
     NgbDropdownModule,
     NgbPaginationModule,
+    NgbPopoverModule,
     NgxBootstrapIconsModule,
   ],
 })
@@ -47,6 +49,14 @@ export class CorrespondentListComponent extends ManagementListComponent<Correspo
     this.typeNamePlural = $localize`correspondents`
     this.permissionType = PermissionType.Correspondent
     this.extraColumns = [
+      {
+        key: 'external_reference',
+        name: $localize`External reference`,
+        hideOnMobile: true,
+        valueFn: (c: Correspondent) => {
+          return c.external_reference
+        },
+      },
       {
         key: 'last_correspondence',
         name: $localize`Last used`,
