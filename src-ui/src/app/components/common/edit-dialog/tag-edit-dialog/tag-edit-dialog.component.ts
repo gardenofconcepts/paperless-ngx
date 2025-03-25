@@ -19,6 +19,7 @@ import { ColorComponent } from '../../input/color/color.component'
 import { PermissionsFormComponent } from '../../input/permissions/permissions-form/permissions-form.component'
 import { SelectComponent } from '../../input/select/select.component'
 import { TextComponent } from '../../input/text/text.component'
+import { TextAreaComponent } from "../../input/textarea/textarea.component";
 
 @Component({
   selector: 'pngx-tag-edit-dialog',
@@ -29,6 +30,7 @@ import { TextComponent } from '../../input/text/text.component'
     CheckComponent,
     ColorComponent,
     TextComponent,
+    TextAreaComponent,
     IfOwnerDirective,
     PermissionsFormComponent,
     FormsModule,
@@ -56,6 +58,7 @@ export class TagEditDialogComponent extends EditDialogComponent<Tag> {
   getForm(): FormGroup {
     return new FormGroup({
       name: new FormControl(''),
+      remark: new FormControl(''),
       color: new FormControl(randomColor()),
       is_inbox_tag: new FormControl(false),
       matching_algorithm: new FormControl(DEFAULT_MATCHING_ALGORITHM),

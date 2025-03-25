@@ -60,7 +60,21 @@
               <label class="form-check-label" for="{{typeName}}{{object.id}}"></label>
             </div>
           </td>
-          <td scope="row"><button class="btn btn-link ms-0 ps-0 text-start" (click)="userCanEdit(object) ? openEditDialog(object) : null; $event.stopPropagation()">{{ object.name }}</button> </td>
+          <td scope="row">
+            <button class="btn btn-link ms-0 ps-0 text-start" (click)="userCanEdit(object) ? openEditDialog(object) : null; $event.stopPropagation()">{{ object.name }}</button>
+            @if (object.remark) {
+              <span
+                [ngbPopover]="object.remark"
+                popoverTitle="Remark"
+                placement="end"
+                container="body"
+                triggers="mouseenter:mouseleave"
+                popoverClass="popover-slim"
+              >
+                <i-bs name="chat-left-text"></i-bs>
+              </span>
+            }
+          </td>
           <td scope="row" class="d-none d-sm-table-cell">{{ getMatching(object) }}</td>
           <td scope="row">{{ object.document_count }}</td>
           @for (column of extraColumns; track column) {
