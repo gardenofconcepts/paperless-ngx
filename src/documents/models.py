@@ -746,6 +746,8 @@ class CustomField(models.Model):
         MONETARY = ("monetary", _("Monetary"))
         DOCUMENTLINK = ("documentlink", _("Document Link"))
         SELECT = ("select", _("Select"))
+        JSON = ("json", _("JSON"))
+        TEXT = ("text", _("Text"))
 
     created = models.DateTimeField(
         _("created"),
@@ -756,11 +758,34 @@ class CustomField(models.Model):
 
     name = models.CharField(max_length=128)
 
+    label = models.TextField(
+        _("label"),
+        blank=True,
+        null=True,
+        help_text=_("A user facing label"),
+    )
+
     remark = models.TextField(
         _("remark"),
         blank=True,
+        null=True,
         help_text=_("Note to this entry"),
     )
+
+    hidden = models.BooleanField(
+        _("hidden"),
+        default=False,
+        help_text=_("Hide this field from the user interface"),
+    )
+
+    group = models.TextField(
+        _("group"),
+        blank=True,
+        null=True,
+        help_text=_("Name to group fields together"),
+    )
+
+    order = models.IntegerField(_("order"), default=0)
 
     data_type = models.CharField(
         _("data type"),
@@ -779,7 +804,7 @@ class CustomField(models.Model):
     )
 
     class Meta:
-        ordering = ("created",)
+        ordering = ("order",)
         verbose_name = _("custom field")
         verbose_name_plural = _("custom fields")
         constraints = [
@@ -809,6 +834,8 @@ class CustomFieldInstance(SoftDeleteModel):
         CustomField.FieldDataType.MONETARY: "value_monetary",
         CustomField.FieldDataType.DOCUMENTLINK: "value_document_ids",
         CustomField.FieldDataType.SELECT: "value_select",
+        CustomField.FieldDataType.JSON: "value_json",
+        CustomField.FieldDataType.TEXT: "value_text_multiline"
     }
 
     created = models.DateTimeField(
@@ -838,6 +865,8 @@ class CustomFieldInstance(SoftDeleteModel):
 
     # Actual data storage
     value_text = models.CharField(max_length=128, null=True)
+
+    value_text_multiline = models.TextField(null=True)
 
     value_bool = models.BooleanField(null=True)
 
@@ -871,6 +900,8 @@ class CustomFieldInstance(SoftDeleteModel):
         output_field=models.DecimalField(decimal_places=2, max_digits=65),
         db_persist=True,
     )
+
+    value_json = models.JSONField(null=True)
 
     value_document_ids = models.JSONField(null=True)
 

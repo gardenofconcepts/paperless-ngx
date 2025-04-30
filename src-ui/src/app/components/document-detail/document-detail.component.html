@@ -220,6 +220,22 @@
                       (removed)="removeField(fieldInstance)"
                       [error]="getCustomFieldError(i)"></pngx-input-select>
                     }
+                    @case (CustomFieldDataType.JSON) {
+                      <pngx-input-textarea formControlName="value"
+                      [title]="getCustomFieldLabelFromInstance(fieldInstance)"
+                      [removable]="userCanEdit"
+                      (removed)="removeField(fieldInstance)"
+                      [horizontal]="true"
+                      [error]="getCustomFieldError(i)"></pngx-input-textarea>
+                    }
+                    @case (CustomFieldDataType.Text) {
+                      <pngx-input-textarea formControlName="value"
+                      [title]="getCustomFieldLabelFromInstance(fieldInstance)"
+                      [removable]="userCanEdit"
+                      (removed)="removeField(fieldInstance)"
+                      [horizontal]="true"
+                      [error]="getCustomFieldError(i)"></pngx-input-textarea>
+                    }
                   }
                 </div>
               }

@@ -68,6 +68,18 @@
           [allowNull]="true"
           [horizontal]="true"></pngx-input-select>
         }
+        @case (CustomFieldDataType.JSON) {
+          <pngx-input-text [(ngModel)]="value[fieldId]" (ngModelChange)="onChange(value)"
+          [title]="getCustomField(fieldId)?.name"
+          class="flex-grow-1"
+          [horizontal]="true"></pngx-input-text>
+        }
+        @case (CustomFieldDataType.Text) {
+          <pngx-input-text [(ngModel)]="value[fieldId]" (ngModelChange)="onChange(value)"
+          [title]="getCustomField(fieldId)?.name"
+          class="flex-grow-1"
+          [horizontal]="true"></pngx-input-text>
+        }
       }
       <button type="button" class="btn btn-link text-danger" (click)="removeSelectedField.next(fieldId)">
         <i-bs name="trash"></i-bs>

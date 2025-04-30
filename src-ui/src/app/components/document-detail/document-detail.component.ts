@@ -99,6 +99,7 @@ import { PermissionsFormComponent } from '../common/input/permissions/permission
 import { SelectComponent } from '../common/input/select/select.component'
 import { TagsComponent } from '../common/input/tags/tags.component'
 import { TextComponent } from '../common/input/text/text.component'
+import { TextAreaComponent } from '../common/input/textarea/textarea.component'
 import { UrlComponent } from '../common/input/url/url.component'
 import { PageHeaderComponent } from '../common/page-header/page-header.component'
 import { ShareLinksDialogComponent } from '../common/share-links-dialog/share-links-dialog.component'
@@ -155,6 +156,7 @@ export enum ZoomSetting {
     SelectComponent,
     TagsComponent,
     TextComponent,
+    TextAreaComponent,
     NumberComponent,
     MonetaryComponent,
     UrlComponent,
@@ -1295,6 +1297,14 @@ export class DocumentDetailComponent
     instance: CustomFieldInstance
   ): CustomField {
     return this.customFields?.find((f) => f.id === instance.field)
+  }
+
+  public getCustomFieldLabelFromInstance(
+    instance: CustomFieldInstance
+  ): string {
+    const field = this.getCustomFieldFromInstance(instance)
+
+    return field?.label || field?.name
   }
 
   public getCustomFieldError(index: number) {

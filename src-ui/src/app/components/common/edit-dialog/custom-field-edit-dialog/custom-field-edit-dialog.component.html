@@ -9,7 +9,11 @@
   </div>
   <div class="modal-body">
     <pngx-input-text i18n-title title="Name" formControlName="name" [error]="error?.name" autocomplete="off"></pngx-input-text>
+    <pngx-input-text i18n-title title="Label" formControlName="label" [error]="error?.label" autocomplete="off"></pngx-input-text>
+    <pngx-input-text i18n-title title="Group" formControlName="group" [error]="error?.group" autocomplete="off"></pngx-input-text>
     <pngx-input-textarea i18n-title title="Remark" formControlName="remark" [error]="error?.remark"></pngx-input-textarea>
+    <pngx-input-check i18n-title title="Hidden" formControlName="hidden"></pngx-input-check>
+    <pngx-input-number i18n-title title="Sort order" formControlName="order" [error]="error?.order" autocomplete="off"></pngx-input-number>
     <pngx-input-select i18n-title title="Data type" [items]="getDataTypes()" formControlName="data_type"></pngx-input-select>
     @if (typeFieldDisabled) {
       <small class="d-block mt-n2" i18n>Data type cannot be changed after a field is created</small>
