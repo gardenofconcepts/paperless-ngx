@@ -2542,7 +2542,7 @@ class CustomFieldViewSet(ModelViewSet):
 
     model = CustomField
 
-    queryset = CustomField.objects.all().order_by("-created")
+    queryset = CustomField.objects.all().order_by("order")
 
     def get_queryset(self):
         filter = (

@@ -304,6 +304,8 @@ class CustomFieldQueryParser:
         CustomField.FieldDataType.MONETARY: ("basic", "string", "arithmetic"),
         CustomField.FieldDataType.DOCUMENTLINK: ("basic", "containment"),
         CustomField.FieldDataType.SELECT: ("basic",),
+        CustomField.FieldDataType.JSON: ("basic", "string"),
+        CustomField.FieldDataType.TEXT: ("basic", "string"),
     }
 
     DATE_COMPONENTS = [
@@ -919,6 +921,20 @@ class DocumentsOrderingFilter(OrderingFilter):
                             document_id=OuterRef("id"),
                             field_id=custom_field_id,
                         ).values("value_bool")[:1],
+                    )
+                case CustomField.FieldDataType.JSON:
+                    annotation = Subquery(
+                        CustomFieldInstance.objects.filter(
+                            document_id=OuterRef("id"),
+                            field_id=custom_field_id,
+                        ).values("value_json")[:1],
+                    )
+                case CustomField.FieldDataType.TEXT:
+                    annotation = Subquery(
+                        CustomFieldInstance.objects.filter(
+                            document_id=OuterRef("id"),
+                            field_id=custom_field_id,
+                        ).values("value_text_multiline")[:1],
                     )
 
             if not annotation:
