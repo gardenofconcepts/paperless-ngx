@@ -1,0 +1,87 @@
+name: ci
+on:
+  push:
+    tags:
+      # https://semver.org/#spec-item-2
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+      # https://semver.org/#spec-item-9
+      - 'v[0-9]+.[0-9]+.[0-9]+-beta.rc[0-9]+'
+    branches-ignore:
+      - 'translations**'
+  pull_request:
+    branches-ignore:
+      - 'translations**'
+env:
+  DEFAULT_UV_VERSION: "0.6.x"
+  # This is the default version of Python to use in most steps which aren't specific
+  DEFAULT_PYTHON_VERSION: "3.11"
+  BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+jobs:
+  build-docker-image:
+    name: Build Docker image for ${{ github.ref_name }}
+    runs-on: ubuntu-24.04
+    concurrency:
+      group: ${{ github.workflow }}-build-docker-image-${{ github.ref_name }}
+      cancel-in-progress: true
+    steps:
+      - name: Set ghcr repository name
+        id: set-ghcr-repository
+        run: |
+          ghcr_name=$(echo "${{ github.repository }}" | awk '{ print tolower($0) }')
+          echo "Name is ${ghcr_name}"
+          echo "ghcr-repository=${ghcr_name}" >> $GITHUB_OUTPUT
+      - name: Gather Docker metadata
+        id: docker-meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ghcr.io/${{ steps.set-ghcr-repository.outputs.ghcr-repository }}
+          tags: |
+            # Tag branches with branch name
+            type=ref,event=branch
+            # Process semver tags
+            # For a tag x.y.z or vX.Y.Z, output an x.y.z and x.y image tag
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+      - name: Checkout
+        uses: actions/checkout@v4
+      # If https://github.com/docker/buildx/issues/1044 is resolved,
+      # the append input with a native arm64 arch could be used to
+      # significantly speed up building
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Extract branch name
+        id: extract_branch
+        run: echo "SANITIZED_BRANCH_NAME=${BRANCH_NAME//\//-}" >> $GITHUB_ENV
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.docker-meta.outputs.tags }}
+          labels: ${{ steps.docker-meta.outputs.labels }}
+          build-args: |
+            PNGX_TAG_VERSION=${{ steps.docker-meta.outputs.version }}
+          # Get cache layers from this branch, then dev
+          # This allows new branches to get at least some cache benefits, generally from dev
+          cache-from: |
+            type=registry,ref=ghcr.io/${{ steps.set-ghcr-repository.outputs.ghcr-repository }}/builder/cache/app:${{ env.SANITIZED_BRANCH_NAME }}
+            type=registry,ref=ghcr.io/${{ steps.set-ghcr-repository.outputs.ghcr-repository }}/builder/cache/app:dev
+            type=registry,ref=ghcr.io/${{ steps.set-ghcr-repository.outputs.ghcr-repository }}/builder/cache/app:dev-goc
+          cache-to: |
+            type=registry,mode=max,ref=ghcr.io/${{ steps.set-ghcr-repository.outputs.ghcr-repository }}/builder/cache/app:${{ env.SANITIZED_BRANCH_NAME }}
+      - name: Inspect image
+        run: |
+          docker buildx imagetools inspect ${{ fromJSON(steps.docker-meta.outputs.json).tags[0] }}
