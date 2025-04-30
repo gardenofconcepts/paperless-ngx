@@ -631,6 +631,12 @@ If both the [PAPERLESS_ACCOUNT_DEFAULT_GROUPS](#PAPERLESS_ACCOUNT_DEFAULT_GROUPS
 
     If you do not have a working email server set up you should set this to 'none'.
 
+#### [`PAPERLESS_ACCOUNT_EMAIL_UNKNOWN_ACCOUNTS=<bool>`](#PAPERLESS_ACCOUNT_EMAIL_UNKNOWN_ACCOUNTS) {#PAPERLESS_ACCOUNT_EMAIL_UNKNOWN_ACCOUNTS}
+
+: See the relevant [django-allauth documentation](https://docs.allauth.org/en/latest/account/configuration.html)
+
+    Defaults to True (from allauth)
+
 #### [`PAPERLESS_DISABLE_REGULAR_LOGIN=<bool>`](#PAPERLESS_DISABLE_REGULAR_LOGIN) {#PAPERLESS_DISABLE_REGULAR_LOGIN}
 
 : Disables the regular frontend username / password login, i.e. once you have setup SSO. Note that this setting does not disable the Django admin login nor logging in with local credentials via the API. To prevent access to the Django admin, consider blocking `/admin/` in your [web server or reverse proxy configuration](https://github.com/paperless-ngx/paperless-ngx/wiki/Using-a-Reverse-Proxy-with-Paperless-ngx).
@@ -1670,7 +1676,7 @@ started by the container.
 
 ## Email sending
 
-Setting an SMTP server for the backend will allow you to reset your
+Setting an SMTP server for the backend will allow you to use the Email workflow action, send documents from the UI as well as reset your
 password. All of these options come from their similarly-named [Django settings](https://docs.djangoproject.com/en/4.2/ref/settings/#email-host)
 
 #### [`PAPERLESS_EMAIL_HOST=<str>`](#PAPERLESS_EMAIL_HOST) {#PAPERLESS_EMAIL_HOST}
