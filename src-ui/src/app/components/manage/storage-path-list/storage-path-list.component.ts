@@ -5,6 +5,7 @@ import {
   NgbDropdownModule,
   NgbModal,
   NgbPaginationModule,
+  NgbPopoverModule,
 } from '@ng-bootstrap/ng-bootstrap'
 import { NgxBootstrapIconsModule } from 'ngx-bootstrap-icons'
 import { FILTER_HAS_STORAGE_PATH_ANY } from 'src/app/data/filter-rule-type'
@@ -39,6 +40,7 @@ import { ManagementListComponent } from '../management-list/management-list.comp
     NgbDropdownModule,
     NgbPaginationModule,
     NgxBootstrapIconsModule,
+    NgbPopoverModule,
   ],
 })
 export class StoragePathListComponent extends ManagementListComponent<StoragePath> {

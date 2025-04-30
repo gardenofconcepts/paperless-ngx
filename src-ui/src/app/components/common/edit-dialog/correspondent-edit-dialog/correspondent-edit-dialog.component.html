@@ -10,6 +10,8 @@
   <div class="modal-body">
 
     <pngx-input-text i18n-title title="Name" formControlName="name" [error]="error?.name" autocomplete="off"></pngx-input-text>
+    <pngx-input-textarea i18n-title title="Remark" formControlName="remark" [error]="error?.remark"></pngx-input-textarea>
+    <pngx-input-text i18n-title title="External Reference" formControlName="external_reference" [error]="error?.external_reference" autocomplete="off"></pngx-input-text>
     <pngx-input-select i18n-title title="Matching algorithm" [items]="getMatchingAlgorithms()" formControlName="matching_algorithm"></pngx-input-select>
     @if (patternRequired) {
       <pngx-input-text i18n-title title="Matching pattern" formControlName="match" [error]="error?.match"></pngx-input-text>

@@ -16,6 +16,7 @@ import { SettingsService } from 'src/app/services/settings.service'
 import { PermissionsFormComponent } from '../../input/permissions/permissions-form/permissions-form.component'
 import { SelectComponent } from '../../input/select/select.component'
 import { TextComponent } from '../../input/text/text.component'
+import { TextAreaComponent } from "../../input/textarea/textarea.component";
 
 @Component({
   selector: 'pngx-document-type-edit-dialog',
@@ -25,6 +26,7 @@ import { TextComponent } from '../../input/text/text.component'
     SelectComponent,
     PermissionsFormComponent,
     TextComponent,
+    TextAreaComponent,
     IfOwnerDirective,
     FormsModule,
     ReactiveFormsModule,
@@ -51,6 +53,7 @@ export class DocumentTypeEditDialogComponent extends EditDialogComponent<Documen
   getForm(): FormGroup {
     return new FormGroup({
       name: new FormControl(''),
+      remark: new FormControl(''),
       matching_algorithm: new FormControl(DEFAULT_MATCHING_ALGORITHM),
       match: new FormControl(''),
       is_insensitive: new FormControl(true),

@@ -5,6 +5,7 @@ import {
   NgbDropdownModule,
   NgbModal,
   NgbPaginationModule,
+  NgbPopoverModule,
 } from '@ng-bootstrap/ng-bootstrap'
 import { NgxBootstrapIconsModule } from 'ngx-bootstrap-icons'
 import { DocumentType } from 'src/app/data/document-type'
@@ -37,6 +38,7 @@ import { ManagementListComponent } from '../management-list/management-list.comp
     NgbDropdownModule,
     NgbPaginationModule,
     NgxBootstrapIconsModule,
+    NgbPopoverModule,
   ],
 })
 export class DocumentTypeListComponent extends ManagementListComponent<DocumentType> {

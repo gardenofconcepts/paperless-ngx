@@ -94,6 +94,7 @@ class DynamicFieldsModelSerializer(serializers.ModelSerializer):
 
 class MatchingModelSerializer(serializers.ModelSerializer):
     document_count = serializers.IntegerField(read_only=True)
+    remark = serializers.CharField(required=False, allow_blank=True)
 
     def get_slug(self, obj) -> str:
         return slugify(obj.name)
@@ -424,6 +425,7 @@ class OwnedObjectListSerializer(serializers.ListSerializer):
 
 class CorrespondentSerializer(MatchingModelSerializer, OwnedObjectSerializer):
     last_correspondence = serializers.DateTimeField(read_only=True, required=False)
+    external_reference = serializers.CharField(required=False, allow_blank=True)
 
     class Meta:
         model = Correspondent
@@ -431,6 +433,8 @@ class CorrespondentSerializer(MatchingModelSerializer, OwnedObjectSerializer):
             "id",
             "slug",
             "name",
+            "remark",
+            "external_reference",
             "match",
             "matching_algorithm",
             "is_insensitive",
@@ -450,6 +454,7 @@ class DocumentTypeSerializer(MatchingModelSerializer, OwnedObjectSerializer):
             "id",
             "slug",
             "name",
+            "remark",
             "match",
             "matching_algorithm",
             "is_insensitive",
@@ -507,6 +512,7 @@ class TagSerializerVersion1(MatchingModelSerializer, OwnedObjectSerializer):
             "id",
             "slug",
             "name",
+            "remark",
             "colour",
             "match",
             "matching_algorithm",
@@ -542,6 +548,7 @@ class TagSerializer(MatchingModelSerializer, OwnedObjectSerializer):
             "id",
             "slug",
             "name",
+            "remark",
             "color",
             "text_color",
             "match",
@@ -604,6 +611,7 @@ class CustomFieldSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "name",
+            "remark",
             "data_type",
             "extra_data",
             "document_count",

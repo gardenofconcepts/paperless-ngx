@@ -61,6 +61,12 @@ class MatchingModel(ModelWithOwner):
 
     name = models.CharField(_("name"), max_length=128)
 
+    remark = models.TextField(
+        _("remark"),
+        blank=True,
+        help_text=_("Note to this entry"),
+    )
+
     match = models.CharField(_("match"), max_length=256, blank=True)
 
     matching_algorithm = models.PositiveIntegerField(
@@ -91,6 +97,12 @@ class MatchingModel(ModelWithOwner):
 
 
 class Correspondent(MatchingModel):
+    external_reference = models.TextField(
+        _("external reference"),
+        blank=True,
+        help_text=_("Reference to an external system, like customer ID, etc."),
+    )
+
     class Meta(MatchingModel.Meta):
         verbose_name = _("correspondent")
         verbose_name_plural = _("correspondents")
@@ -743,6 +755,12 @@ class CustomField(models.Model):
     )
 
     name = models.CharField(max_length=128)
+
+    remark = models.TextField(
+        _("remark"),
+        blank=True,
+        help_text=_("Note to this entry"),
+    )
 
     data_type = models.CharField(
         _("data type"),
