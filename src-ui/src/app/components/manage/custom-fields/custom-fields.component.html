@@ -15,6 +15,8 @@
   <li class="list-group-item">
     <div class="row">
       <div class="col" i18n>Name</div>
+      <div class="col" i18n>Label</div>
+      <div class="col" i18n>Group</div>
       <div class="col" i18n>Data Type</div>
       <div class="col" i18n>Actions</div>
     </div>
@@ -45,7 +47,13 @@
               <i-bs name="chat-left-text"></i-bs>
             </span>
           }
+          @if (field.hidden) {
+            &nbsp;
+            <i-bs name="eye-slash"></i-bs>
+          }
         </div>
+        <div class="col d-flex align-items-center">{{field.label}}</div>
+        <div class="col d-flex align-items-center">{{field.group}}</div>
         <div class="col d-flex align-items-center">{{getDataType(field)}}</div>
         <div class="col">
           <div class="btn-group d-block d-sm-none">

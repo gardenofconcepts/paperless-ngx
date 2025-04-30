@@ -10,6 +10,8 @@ export enum CustomFieldDataType {
   Monetary = 'monetary',
   DocumentLink = 'documentlink',
   Select = 'select',
+  JSON = 'json',
+  Text = 'text',
 }
 
 export const DATA_TYPE_LABELS = [
@@ -49,13 +51,24 @@ export const DATA_TYPE_LABELS = [
     id: CustomFieldDataType.Select,
     name: $localize`Select`,
   },
+  {
+    id: CustomFieldDataType.JSON,
+    name: $localize`JSON`,
+  },
+  {
+    id: CustomFieldDataType.Text,
+    name: $localize`Text`,
+  },
 ]
 
 export interface CustomField extends ObjectWithId {
   data_type: CustomFieldDataType
   name: string
+  label?: string
+  group?: string
   remark?: string
   created?: Date
+  hidden?: boolean
   extra_data?: {
     select_options?: Array<{ label: string; id: string }>
     default_currency?: string
