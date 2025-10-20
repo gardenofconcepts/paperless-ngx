@@ -838,7 +838,7 @@ class CustomFieldInstance(SoftDeleteModel):
         CustomField.FieldDataType.DOCUMENTLINK: "value_document_ids",
         CustomField.FieldDataType.SELECT: "value_select",
         CustomField.FieldDataType.JSON: "value_json",
-        CustomField.FieldDataType.TEXT: "value_text_multiline"
+        CustomField.FieldDataType.TEXT: "value_text_multiline",
     }
 
     created = models.DateTimeField(
@@ -914,10 +914,10 @@ class CustomFieldInstance(SoftDeleteModel):
         ordering = ("created",)
         verbose_name = _("custom field instance")
         verbose_name_plural = _("custom field instances")
-        constraints = [
-            models.UniqueConstraint(
+        indexes = [
+            models.Index(
                 fields=["document", "field"],
-                name="%(app_label)s_%(class)s_unique_document_field",
+                name="docs_cfi_doc_field_idx",
             ),
         ]
 

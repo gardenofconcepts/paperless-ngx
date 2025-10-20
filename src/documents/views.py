@@ -1527,7 +1527,9 @@ class PostDocumentView(GenericAPIView):
             asn=archive_serial_number,
             owner_id=request.user.id,
             # TODO: set values
-            custom_fields={cf_id: None for cf_id in custom_field_ids}
+            custom_fields=[
+                {"field_id": cf_id, "value": None} for cf_id in custom_field_ids
+            ]
             if custom_field_ids
             else None,
         )

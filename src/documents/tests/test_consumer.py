@@ -396,7 +396,10 @@ class TestConsumer(
         with self.get_consumer(
             self.get_test_file(),
             DocumentMetadataOverrides(
-                custom_fields={cf1.id: "value1", cf3.id: "http://example.com"},
+                custom_fields=[
+                    {"field_id": cf1.id, "value": "value1"},
+                    {"field_id": cf3.id, "value": "http://example.com"},
+                ],
             ),
         ) as consumer:
             consumer.run()
@@ -414,6 +417,36 @@ class TestConsumer(
             document.custom_fields.get(field=cf3).value,
             "http://example.com",
         )
+        self._assert_first_last_send_progress()
+
+    def testOverrideCustomFieldsMultiple(self):
+        """
+        Test that multiple instances of the same custom field can be added to a document.
+        This is useful for fields that can have multiple values (e.g., multiple tags, multiple links).
+        """
+        cf1 = CustomField.objects.create(name="Custom Field 1", data_type="string")
+
+        with self.get_consumer(
+            self.get_test_file(),
+            DocumentMetadataOverrides(
+                custom_fields=[
+                    {"field_id": cf1.id, "value": "value1"},
+                    {"field_id": cf1.id, "value": "value2"},
+                    {"field_id": cf1.id, "value": "value3"},
+                ],
+            ),
+        ) as consumer:
+            consumer.run()
+
+            document = Document.objects.first()
+
+        # Should have 3 instances of the same custom field
+        custom_field_instances = document.custom_fields.filter(field=cf1)
+        self.assertEqual(custom_field_instances.count(), 3)
+
+        # Check that all values are present
+        values = sorted([instance.value for instance in custom_field_instances])
+        self.assertEqual(values, ["value1", "value2", "value3"])
         self._assert_first_last_send_progress()
 
     def testOverrideAsn(self):

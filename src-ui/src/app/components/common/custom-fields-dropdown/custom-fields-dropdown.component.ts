@@ -100,9 +100,15 @@ export class CustomFieldsDropdownComponent extends LoadingComponentWithPermissio
   }
 
   private updateUnusedFields() {
-    this.unusedFields = this.customFields.filter(
-      (f) => !this.existingFields?.find((e) => e.field === f.id)
-    )
+    // All fields are always available since we support multiple instances
+    this.unusedFields = this.customFields
+  }
+
+  /**
+   * Get the number of times a field is already used on the document
+   */
+  getFieldInstanceCount(fieldId: number): number {
+    return this.existingFields?.filter((e) => e.field === fieldId).length || 0
   }
 
   onOpenClose(open: boolean) {
