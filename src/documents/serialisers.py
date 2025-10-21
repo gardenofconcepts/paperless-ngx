@@ -752,12 +752,11 @@ class CustomFieldInstanceSerializer(serializers.ModelSerializer):
             # prior to update so we can look for any docs that are going to be removed
             bulk_edit.reflect_doclinks(document, custom_field, validated_data["value"])
 
-        # Actually update or create the instance, providing the value
-        # to fill in the correct attribute based on the type
-        instance, _ = CustomFieldInstance.objects.update_or_create(
+        # Create a new instance - multiple instances of the same field are now allowed
+        instance = CustomFieldInstance.objects.create(
             document=document,
             field=custom_field,
-            defaults={data_store_name: validated_data["value"]},
+            **{data_store_name: validated_data["value"]},
         )
         return instance
 
@@ -1022,24 +1021,32 @@ class DocumentSerializer(
                 "created_date is deprecated, use created instead",
             )
             validated_data.pop("created_date")
-        if instance.custom_fields.count() > 0 and "custom_fields" in validated_data:
+        if "custom_fields" in validated_data:
             incoming_custom_fields = [
                 field["field"] for field in validated_data["custom_fields"]
             ]
-            for custom_field_instance in instance.custom_fields.filter(
-                field__data_type=CustomField.FieldDataType.DOCUMENTLINK,
-            ):
-                if (
-                    custom_field_instance.field not in incoming_custom_fields
-                    and custom_field_instance.value is not None
+
+            # Handle document links that are being removed
+            if instance.custom_fields.count() > 0:
+                for custom_field_instance in instance.custom_fields.filter(
+                    field__data_type=CustomField.FieldDataType.DOCUMENTLINK,
                 ):
-                    # Doc link field is being removed entirely
-                    for doc_id in custom_field_instance.value:
-                        bulk_edit.remove_doclink(
-                            instance,
-                            custom_field_instance.field,
-                            doc_id,
-                        )
+                    if (
+                        custom_field_instance.field not in incoming_custom_fields
+                        and custom_field_instance.value is not None
+                    ):
+                        # Doc link field is being removed entirely
+                        for doc_id in custom_field_instance.value:
+                            bulk_edit.remove_doclink(
+                                instance,
+                                custom_field_instance.field,
+                                doc_id,
+                            )
+
+            # Delete all existing custom field instances for fields that are being updated
+            # This allows multiple instances of the same field to be created
+            if incoming_custom_fields:
+                instance.custom_fields.filter(field__in=incoming_custom_fields).delete()
         if validated_data.get("remove_inbox_tags"):
             tag_ids_being_added = (
                 [

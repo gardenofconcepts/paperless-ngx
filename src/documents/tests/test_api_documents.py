@@ -1473,7 +1473,10 @@ class TestDocumentApi(DirectoriesMixin, DocumentConsumeDelayMixin, APITestCase):
 
         self.assertEqual(input_doc.original_file.name, "simple.pdf")
         self.assertEqual(overrides.filename, "simple.pdf")
-        self.assertEqual(overrides.custom_fields, {custom_field.id: None})
+        self.assertEqual(
+            overrides.custom_fields,
+            [{"field_id": custom_field.id, "value": None}],
+        )
 
     def test_upload_with_custom_fields_and_workflow(self):
         """

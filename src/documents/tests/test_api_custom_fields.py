@@ -643,6 +643,58 @@ class TestCustomFieldsAPI(DirectoriesMixin, APITestCase):
         self.assertEqual(CustomFieldInstance.objects.count(), 1)
         self.assertEqual(doc.custom_fields.first().value, "a new test value")
 
+    def test_multiple_custom_field_instances_same_field(self):
+        """
+        GIVEN:
+            - A document and a custom field
+        WHEN:
+            - API request to create multiple instances of the same custom field
+        THEN:
+            - Multiple instances are created
+            - All values are preserved
+            - Response contains all instances
+        """
+        doc = Document.objects.create(
+            title="Test Doc",
+            content="the content",
+            checksum="456",
+            mime_type="application/pdf",
+        )
+        custom_field = CustomField.objects.create(
+            name="Test Field",
+            data_type=CustomField.FieldDataType.STRING,
+        )
+
+        # Create multiple instances of the same field
+        resp = self.client.patch(
+            f"/api/documents/{doc.id}/",
+            data={
+                "custom_fields": [
+                    {"field": custom_field.id, "value": "value_b"},
+                    {"field": custom_field.id, "value": "value_a"},
+                    {"field": custom_field.id, "value": "value_c"},
+                ],
+            },
+            format="json",
+        )
+
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(CustomFieldInstance.objects.count(), 3)
+
+        # Check that all instances are returned in the response
+        returned_fields = resp.data["custom_fields"]
+        self.assertEqual(len(returned_fields), 3)
+
+        # Check that all values are present
+        returned_values = sorted([f["value"] for f in returned_fields])
+        self.assertEqual(returned_values, ["value_a", "value_b", "value_c"])
+
+        # Verify in database
+        instances = doc.custom_fields.filter(field=custom_field).order_by("value")
+        self.assertEqual(instances.count(), 3)
+        db_values = sorted([inst.value for inst in instances])
+        self.assertEqual(db_values, ["value_a", "value_b", "value_c"])
+
     def test_delete_custom_field_instance(self):
         """
         GIVEN:
