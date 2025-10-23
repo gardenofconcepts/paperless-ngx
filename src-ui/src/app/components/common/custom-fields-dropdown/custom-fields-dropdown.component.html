@@ -12,7 +12,13 @@
             </div>
             @for (field of filteredFields; track field.id) {
                 <button class="list-group-item list-group-item-action bg-light" (click)="addField(field)" #button>
-                    <small class="d-flex">{{field.name}} <small class="ms-auto text-muted">{{getDataTypeLabel(field.data_type)}}</small></small>
+                    <small class="d-flex">
+                        {{field.name}}
+                        @if (getFieldInstanceCount(field.id) > 0) {
+                            <small class="badge bg-secondary mx-1">{{getFieldInstanceCount(field.id)}}</small>
+                        }
+                        <small class="ms-auto text-muted">{{getDataTypeLabel(field.data_type)}}</small>
+                    </small>
                 </button>
             }
             @if (!filterText?.length || filteredFields.length === 0) {

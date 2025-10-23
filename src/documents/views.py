@@ -1647,9 +1647,21 @@ class PostDocumentView(GenericAPIView):
         )
         custom_fields = None
         if isinstance(cf, dict) and cf:
-            custom_fields = cf
+            # Convert dict to list format (backwards compatibility)
+            custom_fields = [
+                {"field_id": int(field_id), "value": value}
+                for field_id, value in cf.items()
+            ]
         elif isinstance(cf, list) and cf:
-            custom_fields = dict.fromkeys(cf, None)
+            # Check if it's already in the correct format (list of dicts with field_id and value)
+            if isinstance(cf[0], dict) and "field_id" in cf[0]:
+                # Already normalized by validator
+                custom_fields = cf
+            else:
+                # Convert list of field IDs to list of dicts with None values
+                custom_fields = [
+                    {"field_id": cf_id, "value": None} for cf_id in cf
+                ]
         input_doc_overrides = DocumentMetadataOverrides(
             filename=doc_name,
             title=title,

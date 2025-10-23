@@ -1474,7 +1474,10 @@ class TestDocumentApi(DirectoriesMixin, DocumentConsumeDelayMixin, APITestCase):
 
         self.assertEqual(input_doc.original_file.name, "simple.pdf")
         self.assertEqual(overrides.filename, "simple.pdf")
-        self.assertEqual(overrides.custom_fields, {custom_field.id: None})
+        self.assertEqual(
+            overrides.custom_fields,
+            [{"field_id": custom_field.id, "value": None}],
+        )
 
     def test_upload_with_custom_fields_and_workflow(self):
         """
@@ -1582,6 +1585,53 @@ class TestDocumentApi(DirectoriesMixin, DocumentConsumeDelayMixin, APITestCase):
         self.assertEqual(
             overrides.custom_fields,
             {cf_string.id: "a string", cf_int.id: 123},
+        )
+
+    def test_upload_with_multiple_custom_field_instances(self):
+        """
+        GIVEN: A document with a source file
+        WHEN: Upload the document with multiple instances of the same custom field
+        THEN: Metadata includes all instances correctly
+        """
+        self.consume_file_mock.return_value = celery.result.AsyncResult(
+            id=str(uuid.uuid4()),
+        )
+
+        cf_string = CustomField.objects.create(
+            name="stringfield",
+            data_type=CustomField.FieldDataType.STRING,
+        )
+
+        with (Path(__file__).parent / "samples" / "simple.pdf").open("rb") as f:
+            response = self.client.post(
+                "/api/documents/post_document/",
+                {
+                    "document": f,
+                    "custom_fields": json.dumps(
+                        [
+                            {"field": cf_string.id, "value": "first value"},
+                            {"field": cf_string.id, "value": "second value"},
+                            {"field": cf_string.id, "value": "third value"},
+                        ],
+                    ),
+                },
+            )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.consume_file_mock.assert_called_once()
+
+        input_doc, overrides = self.get_last_consume_delay_call_args()
+
+        self.assertEqual(input_doc.original_file.name, "simple.pdf")
+        self.assertEqual(overrides.filename, "simple.pdf")
+        self.assertEqual(
+            overrides.custom_fields,
+            [
+                {"field_id": cf_string.id, "value": "first value"},
+                {"field_id": cf_string.id, "value": "second value"},
+                {"field_id": cf_string.id, "value": "third value"},
+            ],
         )
 
     def test_upload_with_custom_fields_errors(self):

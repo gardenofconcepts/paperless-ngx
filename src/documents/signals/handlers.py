@@ -902,15 +902,18 @@ def run_workflows(
                         )
             else:
                 if overrides.custom_fields is None:
-                    overrides.custom_fields = {}
-                overrides.custom_fields.update(
-                    {
-                        field.pk: action.assign_custom_fields_values.get(
-                            str(field.pk),
-                            None,
-                        )
+                    overrides.custom_fields = []
+                overrides.custom_fields.extend(
+                    [
+                        {
+                            "field_id": field.pk,
+                            "value": action.assign_custom_fields_values.get(
+                                str(field.pk),
+                                None,
+                            ),
+                        }
                         for field in action.assign_custom_fields.all()
-                    },
+                    ],
                 )
 
     def removal_action():
@@ -1079,10 +1082,16 @@ def run_workflows(
                     document=document,
                 ).hard_delete()
             elif overrides.custom_fields:
-                for field in action.remove_custom_fields.filter(
-                    pk__in=overrides.custom_fields.keys(),
-                ):
-                    overrides.custom_fields.pop(field.pk, None)
+                # Get field IDs to remove
+                field_ids_to_remove = set(
+                    action.remove_custom_fields.values_list("pk", flat=True),
+                )
+                # Filter out custom field entries that match the field IDs to remove
+                overrides.custom_fields = [
+                    cf
+                    for cf in overrides.custom_fields
+                    if cf["field_id"] not in field_ids_to_remove
+                ]
 
     def email_action():
         if not settings.EMAIL_ENABLED:

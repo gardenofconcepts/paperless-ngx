@@ -14,6 +14,11 @@ class DocumentMetadataOverrides:
     Manages overrides for document fields which normally would
     be set from content or matching.  All fields default to None,
     meaning no override is happening
+
+    Note: custom_fields is a list of dicts with structure:
+    [{"field_id": int, "value": Any}, ...]
+    This allows multiple instances of the same custom field ID to be added
+    to a document (e.g., multiple links, multiple values).
     """
 
     filename: str | None = None
@@ -29,7 +34,7 @@ class DocumentMetadataOverrides:
     view_groups: list[int] | None = None
     change_users: list[int] | None = None
     change_groups: list[int] | None = None
-    custom_fields: dict | None = None
+    custom_fields: list[dict] | None = None
 
     def update(self, other: "DocumentMetadataOverrides") -> "DocumentMetadataOverrides":
         """
@@ -84,7 +89,7 @@ class DocumentMetadataOverrides:
         if self.custom_fields is None:
             self.custom_fields = other.custom_fields
         elif other.custom_fields is not None:
-            self.custom_fields.update(other.custom_fields)
+            self.custom_fields.extend(other.custom_fields)
 
         return self
 
@@ -113,10 +118,10 @@ class DocumentMetadataOverrides:
                 only_with_perms_in=["change_document"],
             ).values_list("id", flat=True),
         )
-        overrides.custom_fields = {
-            custom_field.id: custom_field.value
+        overrides.custom_fields = [
+            {"field_id": custom_field.field.id, "value": custom_field.value}
             for custom_field in doc.custom_fields.all()
-        }
+        ]
 
         groups_with_perms = get_groups_with_perms(
             doc,

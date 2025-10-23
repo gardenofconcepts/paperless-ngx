@@ -831,15 +831,14 @@ class CustomFieldInstanceSerializer(serializers.ModelSerializer):
         )
 
         if custom_field.data_type == CustomField.FieldDataType.DOCUMENTLINK:
-            # prior to update so we can look for any docs that are going to be removed
+            # prior to create so we can look for any docs that are going to be added
             bulk_edit.reflect_doclinks(document, custom_field, validated_data["value"])
 
-        # Actually update or create the instance, providing the value
-        # to fill in the correct attribute based on the type
-        instance, _ = CustomFieldInstance.objects.update_or_create(
+        # Create the instance, providing the value to fill in the correct attribute based on the type
+        instance = CustomFieldInstance.objects.create(
             document=document,
             field=custom_field,
-            defaults={data_store_name: validated_data["value"]},
+            **{data_store_name: validated_data["value"]},
         )
         return instance
 
@@ -1105,9 +1104,9 @@ class DocumentSerializer(
             )
             validated_data.pop("created_date")
         if instance.custom_fields.count() > 0 and "custom_fields" in validated_data:
-            incoming_custom_fields = [
+            incoming_custom_fields = {
                 field["field"] for field in validated_data["custom_fields"]
-            ]
+            }
             for custom_field_instance in instance.custom_fields.filter(
                 field__data_type=CustomField.FieldDataType.DOCUMENTLINK,
             ):
@@ -1122,6 +1121,15 @@ class DocumentSerializer(
                             custom_field_instance.field,
                             doc_id,
                         )
+
+        # Delete all existing custom field instances for fields that are being updated
+        # This allows multiple instances of the same field to be created
+        if "custom_fields" in validated_data:
+            incoming_custom_fields = {
+                field["field"] for field in validated_data["custom_fields"]
+            }
+            if incoming_custom_fields:
+                instance.custom_fields.filter(field__in=incoming_custom_fields).delete()
         if "tags" in validated_data:
             # Respect tag hierarchy on updates:
             # - Adding a child adds its ancestors
@@ -1875,22 +1883,56 @@ class PostDocumentSerializer(serializers.Serializer):
                 normalized[field_id_int] = value
             return normalized
         elif isinstance(custom_fields, list):
-            try:
-                ids = [int(i) for i in custom_fields]
-            except (TypeError, ValueError):
-                raise serializers.ValidationError(
-                    _(
-                        "Custom fields must be a list of integers or an object mapping ids to values.",
-                    ),
-                )
-            if CustomField.objects.filter(id__in=ids).count() != len(set(ids)):
-                raise serializers.ValidationError(
-                    _("Some custom fields don't exist or were specified twice."),
-                )
-            return ids
+            # Check if it's a list of dicts (new format for multiple instances)
+            if custom_fields and isinstance(custom_fields[0], dict):
+                custom_field_serializer = CustomFieldInstanceSerializer()
+                normalized = []
+                for item in custom_fields:
+                    if not isinstance(item, dict) or "field" not in item:
+                        raise serializers.ValidationError(
+                            _(
+                                "Custom fields list items must be objects with 'field' and 'value' properties.",
+                            ),
+                        )
+                    try:
+                        field_id = int(item["field"])
+                    except (TypeError, ValueError, KeyError):
+                        raise serializers.ValidationError(
+                            _("Custom field 'field' must be an integer"),
+                        )
+                    try:
+                        field = CustomField.objects.get(id=field_id)
+                    except CustomField.DoesNotExist:
+                        raise serializers.ValidationError(
+                            _("Custom field with id %(id)s does not exist")
+                            % {"id": field_id},
+                        )
+                    custom_field_serializer.validate(
+                        {
+                            "field": field,
+                            "value": item.get("value"),
+                        },
+                    )
+                    normalized.append({"field_id": field_id, "value": item.get("value")})
+                return normalized
+            else:
+                # List of integers (old format)
+                try:
+                    ids = [int(i) for i in custom_fields]
+                except (TypeError, ValueError):
+                    raise serializers.ValidationError(
+                        _(
+                            "Custom fields must be a list of integers, a list of objects, or an object mapping ids to values.",
+                        ),
+                    )
+                if CustomField.objects.filter(id__in=ids).count() != len(set(ids)):
+                    raise serializers.ValidationError(
+                        _("Some custom fields don't exist or were specified twice."),
+                    )
+                return ids
         raise serializers.ValidationError(
             _(
-                "Custom fields must be a list of integers or an object mapping ids to values.",
+                "Custom fields must be a list of integers, a list of objects, or an object mapping ids to values.",
             ),
         )
 
