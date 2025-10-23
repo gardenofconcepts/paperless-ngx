@@ -801,6 +801,7 @@ class CustomField(models.Model):
         DOCUMENTLINK = ("documentlink", _("Document Link"))
         SELECT = ("select", _("Select"))
         LONG_TEXT = ("longtext", _("Long Text"))
+        JSON = ("json", _("JSON"))
 
     created = models.DateTimeField(
         _("created"),
@@ -811,7 +812,34 @@ class CustomField(models.Model):
 
     name = models.CharField(max_length=128)
 
-    remark = models.TextField(_("remark"), blank=True)
+    label = models.TextField(
+        _("label"),
+        blank=True,
+        null=True,
+        help_text=_("A user facing label"),
+    )
+
+    remark = models.TextField(
+        _("remark"),
+        blank=True,
+        null=True,
+        help_text=_("Note to this entry"),
+    )
+
+    hidden = models.BooleanField(
+        _("hidden"),
+        default=False,
+        help_text=_("Hide this field from the user interface"),
+    )
+
+    group = models.TextField(
+        _("group"),
+        blank=True,
+        null=True,
+        help_text=_("Name to group fields together"),
+    )
+
+    order = models.IntegerField(_("order"), default=0)
 
     data_type = models.CharField(
         _("data type"),
@@ -830,7 +858,7 @@ class CustomField(models.Model):
     )
 
     class Meta:
-        ordering = ("created",)
+        ordering = ("order",)
         verbose_name = _("custom field")
         verbose_name_plural = _("custom fields")
         constraints = [
@@ -861,6 +889,7 @@ class CustomFieldInstance(SoftDeleteModel):
         CustomField.FieldDataType.DOCUMENTLINK: "value_document_ids",
         CustomField.FieldDataType.SELECT: "value_select",
         CustomField.FieldDataType.LONG_TEXT: "value_long_text",
+        CustomField.FieldDataType.JSON: "value_json",
     }
 
     created = models.DateTimeField(
@@ -929,6 +958,8 @@ class CustomFieldInstance(SoftDeleteModel):
     value_select = models.CharField(null=True, max_length=16)
 
     value_long_text = models.TextField(null=True)
+
+    value_json = models.JSONField(null=True)
 
     class Meta:
         ordering = ("created",)

@@ -7,26 +7,26 @@
       @switch (getCustomField(fieldId)?.data_type) {
         @case (CustomFieldDataType.String) {
           <pngx-input-text [(ngModel)]="value[fieldId]" (ngModelChange)="onChange(value)"
-          [title]="getCustomField(fieldId)?.name"
+          [title]="getCustomFieldLabel(fieldId)"
           class="flex-grow-1"
           [horizontal]="true"></pngx-input-text>
         }
         @case (CustomFieldDataType.Date) {
           <pngx-input-date [(ngModel)]="value[fieldId]" (ngModelChange)="onChange(value)"
-          [title]="getCustomField(fieldId)?.name"
+          [title]="getCustomFieldLabel(fieldId)"
           class="flex-grow-1"
           [horizontal]="true"></pngx-input-date>
         }
         @case (CustomFieldDataType.Integer) {
           <pngx-input-number [(ngModel)]="value[fieldId]" (ngModelChange)="onChange(value)"
-          [title]="getCustomField(fieldId)?.name"
+          [title]="getCustomFieldLabel(fieldId)"
           class="flex-grow-1"
           [horizontal]="true"
           [showAdd]="false"></pngx-input-number>
         }
         @case (CustomFieldDataType.Float) {
           <pngx-input-number [(ngModel)]="value[fieldId]" (ngModelChange)="onChange(value)"
-          [title]="getCustomField(fieldId)?.name"
+          [title]="getCustomFieldLabel(fieldId)"
           class="flex-grow-1"
           [horizontal]="true"
           [showAdd]="false"
@@ -34,7 +34,7 @@
         }
         @case (CustomFieldDataType.Monetary) {
           <pngx-input-monetary [(ngModel)]="value[fieldId]" (ngModelChange)="onChange(value)"
-          [title]="getCustomField(fieldId)?.name"
+          [title]="getCustomFieldLabel(fieldId)"
           class="flex-grow-1"
           [defaultCurrency]="getCustomField(fieldId)?.extra_data?.default_currency"
           class="flex-grow-1"
@@ -42,25 +42,25 @@
         }
         @case (CustomFieldDataType.Boolean) {
           <pngx-input-check [(ngModel)]="value[fieldId]" (ngModelChange)="onChange(value)"
-          [title]="getCustomField(fieldId)?.name"
+          [title]="getCustomFieldLabel(fieldId)"
           class="flex-grow-1"
           [horizontal]="true"></pngx-input-check>
         }
         @case (CustomFieldDataType.Url) {
           <pngx-input-url [(ngModel)]="value[fieldId]" (ngModelChange)="onChange(value)"
-          [title]="getCustomField(fieldId)?.name"
+          [title]="getCustomFieldLabel(fieldId)"
           class="flex-grow-1"
           [horizontal]="true"></pngx-input-url>
         }
         @case (CustomFieldDataType.DocumentLink) {
           <pngx-input-document-link [(ngModel)]="value[fieldId]" (ngModelChange)="onChange(value)"
-          [title]="getCustomField(fieldId)?.name"
+          [title]="getCustomFieldLabel(fieldId)"
           class="flex-grow-1"
           [horizontal]="true"></pngx-input-document-link>
         }
         @case (CustomFieldDataType.Select) {
           <pngx-input-select [(ngModel)]="value[fieldId]" (ngModelChange)="onChange(value)"
-          [title]="getCustomField(fieldId)?.name"
+          [title]="getCustomFieldLabel(fieldId)"
           class="flex-grow-1"
           [items]="getCustomField(fieldId)?.extra_data.select_options"
           class="flex-grow-1"
@@ -70,7 +70,12 @@
         }
         @case (CustomFieldDataType.LongText) {
           <pngx-input-textarea [(ngModel)]="value[fieldId]" (ngModelChange)="onChange(value)"
-          [title]="getCustomField(fieldId)?.name"
+          [title]="getCustomFieldLabel(fieldId)"
+          class="flex-grow-1"></pngx-input-textarea>
+        }
+        @case (CustomFieldDataType.JSON) {
+          <pngx-input-textarea [(ngModel)]="value[fieldId]" (ngModelChange)="onChange(value)"
+          [title]="getCustomFieldLabel(fieldId)"
           class="flex-grow-1"></pngx-input-textarea>
         }
       }

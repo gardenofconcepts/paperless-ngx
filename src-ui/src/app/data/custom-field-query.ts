@@ -118,6 +118,10 @@ export const CUSTOM_FIELD_QUERY_OPERATOR_GROUPS_BY_TYPE = {
     CustomFieldQueryOperatorGroups.Basic,
     CustomFieldQueryOperatorGroups.String,
   ],
+  [CustomFieldDataType.JSON]: [
+    CustomFieldQueryOperatorGroups.Basic,
+    CustomFieldQueryOperatorGroups.String,
+  ],
 }
 
 export const CUSTOM_FIELD_QUERY_VALUE_TYPES_BY_OPERATOR = {

@@ -697,7 +697,11 @@ class CustomFieldSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "name",
+            "label",
             "remark",
+            "hidden",
+            "group",
+            "order",
             "data_type",
             "extra_data",
             "document_count",

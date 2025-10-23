@@ -92,4 +92,9 @@ export class CustomFieldsValuesComponent extends AbstractInputComponent<Object> 
   public getCustomField(id: number): CustomField {
     return this.fields.find((field) => field.id === id)
   }
+
+  public getCustomFieldLabel(id: number): string {
+    const field = this.getCustomField(id)
+    return field?.label || field?.name
+  }
 }

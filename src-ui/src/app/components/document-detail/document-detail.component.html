@@ -139,7 +139,7 @@
                   @switch (getCustomFieldFromInstance(fieldInstance)?.data_type) {
                     @case (CustomFieldDataType.String) {
                       <pngx-input-text formControlName="value"
-                      [title]="getCustomFieldFromInstance(fieldInstance)?.name"
+                      [title]="getCustomFieldLabelFromInstance(fieldInstance)"
                       [removable]="userCanEdit"
                       (removed)="removeField(fieldInstance)"
                       [horizontal]="true"
@@ -147,7 +147,7 @@
                     }
                     @case (CustomFieldDataType.Date) {
                       <pngx-input-date formControlName="value"
-                      [title]="getCustomFieldFromInstance(fieldInstance)?.name"
+                      [title]="getCustomFieldLabelFromInstance(fieldInstance)"
                       [removable]="userCanEdit"
                       (removed)="removeField(fieldInstance)"
                       [horizontal]="true"
@@ -155,7 +155,7 @@
                     }
                     @case (CustomFieldDataType.Integer) {
                       <pngx-input-number formControlName="value"
-                      [title]="getCustomFieldFromInstance(fieldInstance)?.name"
+                      [title]="getCustomFieldLabelFromInstance(fieldInstance)"
                       [removable]="userCanEdit"
                       (removed)="removeField(fieldInstance)"
                       [horizontal]="true"
@@ -164,7 +164,7 @@
                     }
                     @case (CustomFieldDataType.Float) {
                       <pngx-input-number formControlName="value"
-                      [title]="getCustomFieldFromInstance(fieldInstance)?.name"
+                      [title]="getCustomFieldLabelFromInstance(fieldInstance)"
                       [removable]="userCanEdit"
                       (removed)="removeField(fieldInstance)"
                       [horizontal]="true"
@@ -174,7 +174,7 @@
                     }
                     @case (CustomFieldDataType.Monetary) {
                       <pngx-input-monetary formControlName="value"
-                      [title]="getCustomFieldFromInstance(fieldInstance)?.name"
+                      [title]="getCustomFieldLabelFromInstance(fieldInstance)"
                       [defaultCurrency]="getCustomFieldFromInstance(fieldInstance)?.extra_data?.default_currency"
                       [removable]="userCanEdit"
                       (removed)="removeField(fieldInstance)"
@@ -183,14 +183,14 @@
                     }
                     @case (CustomFieldDataType.Boolean) {
                       <pngx-input-check formControlName="value"
-                      [title]="getCustomFieldFromInstance(fieldInstance)?.name"
+                      [title]="getCustomFieldLabelFromInstance(fieldInstance)"
                       [removable]="userCanEdit"
                       (removed)="removeField(fieldInstance)"
                       [horizontal]="true"></pngx-input-check>
                     }
                     @case (CustomFieldDataType.Url) {
                       <pngx-input-url formControlName="value"
-                      [title]="getCustomFieldFromInstance(fieldInstance)?.name"
+                      [title]="getCustomFieldLabelFromInstance(fieldInstance)"
                       [removable]="userCanEdit"
                       (removed)="removeField(fieldInstance)"
                       [horizontal]="true"
@@ -198,7 +198,7 @@
                     }
                     @case (CustomFieldDataType.DocumentLink) {
                       <pngx-input-document-link formControlName="value"
-                      [title]="getCustomFieldFromInstance(fieldInstance)?.name"
+                      [title]="getCustomFieldLabelFromInstance(fieldInstance)"
                       [parentDocumentID]="documentId"
                       [removable]="userCanEdit"
                       (removed)="removeField(fieldInstance)"
@@ -207,7 +207,7 @@
                     }
                     @case (CustomFieldDataType.Select) {
                       <pngx-input-select formControlName="value"
-                      [title]="getCustomFieldFromInstance(fieldInstance)?.name"
+                      [title]="getCustomFieldLabelFromInstance(fieldInstance)"
                       [items]="getCustomFieldFromInstance(fieldInstance)?.extra_data.select_options"
                       bindLabel="label"
                       [allowNull]="true"
@@ -218,7 +218,15 @@
                     }
                     @case (CustomFieldDataType.LongText) {
                       <pngx-input-textarea formControlName="value"
-                      [title]="getCustomFieldFromInstance(fieldInstance)?.name"
+                      [title]="getCustomFieldLabelFromInstance(fieldInstance)"
+                      [removable]="userCanEdit"
+                      (removed)="removeField(fieldInstance)"
+                      [horizontal]="true"
+                      [error]="getCustomFieldError(i)"></pngx-input-textarea>
+                    }
+                    @case (CustomFieldDataType.JSON) {
+                      <pngx-input-textarea formControlName="value"
+                      [title]="getCustomFieldLabelFromInstance(fieldInstance)"
                       [removable]="userCanEdit"
                       (removed)="removeField(fieldInstance)"
                       [horizontal]="true"

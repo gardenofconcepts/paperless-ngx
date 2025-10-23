@@ -1343,6 +1343,13 @@ export class DocumentDetailComponent
     return this.customFields?.find((f) => f.id === instance.field)
   }
 
+  public getCustomFieldLabelFromInstance(
+    instance: CustomFieldInstance
+  ): string {
+    const field = this.getCustomFieldFromInstance(instance)
+    return field?.label || field?.name
+  }
+
   public getCustomFieldError(index: number) {
     const fieldError = this.error?.custom_fields?.[index]
     return fieldError?.['non_field_errors'] ?? fieldError?.['value']
