@@ -82,6 +82,3 @@ jobs:
             type=registry,ref=ghcr.io/${{ steps.set-ghcr-repository.outputs.ghcr-repository }}/builder/cache/app:dev-goc
           cache-to: |
             type=registry,mode=max,ref=ghcr.io/${{ steps.set-ghcr-repository.outputs.ghcr-repository }}/builder/cache/app:${{ env.SANITIZED_BRANCH_NAME }}
-      - name: Inspect image
-        run: |
-          docker buildx imagetools inspect ${{ fromJSON(steps.docker-meta.outputs.json).tags[0] }}
