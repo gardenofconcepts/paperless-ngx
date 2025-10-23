@@ -16,6 +16,7 @@ import { CheckComponent } from '../../input/check/check.component'
 import { PermissionsFormComponent } from '../../input/permissions/permissions-form/permissions-form.component'
 import { SelectComponent } from '../../input/select/select.component'
 import { TextComponent } from '../../input/text/text.component'
+import { TextAreaComponent } from '../../input/textarea/textarea.component'
 
 @Component({
   selector: 'pngx-correspondent-edit-dialog',
@@ -26,6 +27,7 @@ import { TextComponent } from '../../input/text/text.component'
     SelectComponent,
     PermissionsFormComponent,
     TextComponent,
+    TextAreaComponent,
     IfOwnerDirective,
     FormsModule,
     ReactiveFormsModule,
@@ -50,6 +52,8 @@ export class CorrespondentEditDialogComponent extends EditDialogComponent<Corres
   getForm(): FormGroup {
     return new FormGroup({
       name: new FormControl(''),
+      external_reference: new FormControl(''),
+      remark: new FormControl(''),
       matching_algorithm: new FormControl(DEFAULT_MATCHING_ALGORITHM),
       match: new FormControl(''),
       is_insensitive: new FormControl(true),

@@ -446,6 +446,7 @@ class OwnedObjectListSerializer(serializers.ListSerializer):
 
 class CorrespondentSerializer(MatchingModelSerializer, OwnedObjectSerializer):
     last_correspondence = serializers.DateField(read_only=True, required=False)
+    external_reference = serializers.CharField(required=False, allow_blank=True)
 
     class Meta:
         model = Correspondent
@@ -453,6 +454,8 @@ class CorrespondentSerializer(MatchingModelSerializer, OwnedObjectSerializer):
             "id",
             "slug",
             "name",
+            "remark",
+            "external_reference",
             "match",
             "matching_algorithm",
             "is_insensitive",
@@ -472,6 +475,7 @@ class DocumentTypeSerializer(MatchingModelSerializer, OwnedObjectSerializer):
             "id",
             "slug",
             "name",
+            "remark",
             "match",
             "matching_algorithm",
             "is_insensitive",
@@ -598,6 +602,7 @@ class TagSerializer(MatchingModelSerializer, OwnedObjectSerializer):
             "id",
             "slug",
             "name",
+            "remark",
             "color",
             "text_color",
             "match",
@@ -692,6 +697,7 @@ class CustomFieldSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "name",
+            "remark",
             "data_type",
             "extra_data",
             "document_count",
@@ -1970,6 +1976,7 @@ class StoragePathSerializer(MatchingModelSerializer, OwnedObjectSerializer):
             "id",
             "slug",
             "name",
+            "remark",
             "path",
             "match",
             "matching_algorithm",

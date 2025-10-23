@@ -65,4 +65,5 @@ export interface CustomField extends ObjectWithId {
     default_currency?: string
   }
   document_count?: number
+  remark?: string
 }

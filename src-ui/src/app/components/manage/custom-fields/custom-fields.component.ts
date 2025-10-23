@@ -3,6 +3,7 @@ import {
   NgbDropdownModule,
   NgbModal,
   NgbPaginationModule,
+  NgbPopoverModule,
 } from '@ng-bootstrap/ng-bootstrap'
 import { NgxBootstrapIconsModule } from 'ngx-bootstrap-icons'
 import { delay, takeUntil, tap } from 'rxjs'
@@ -35,6 +36,7 @@ import { LoadingComponentWithPermissions } from '../../loading-component/loading
     IfPermissionsDirective,
     NgbDropdownModule,
     NgbPaginationModule,
+    NgbPopoverModule,
     NgxBootstrapIconsModule,
   ],
 })

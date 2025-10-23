@@ -73,6 +73,8 @@ class MatchingModel(ModelWithOwner):
 
     is_insensitive = models.BooleanField(_("is insensitive"), default=True)
 
+    remark = models.TextField(_("remark"), blank=True)
+
     class Meta:
         abstract = True
         ordering = ("name",)
@@ -93,6 +95,12 @@ class MatchingModel(ModelWithOwner):
 
 
 class Correspondent(MatchingModel):
+    external_reference = models.TextField(
+        _("external reference"),
+        blank=True,
+        help_text=_("External reference to link to other systems"),
+    )
+
     class Meta(MatchingModel.Meta):
         verbose_name = _("correspondent")
         verbose_name_plural = _("correspondents")
@@ -802,6 +810,8 @@ class CustomField(models.Model):
     )
 
     name = models.CharField(max_length=128)
+
+    remark = models.TextField(_("remark"), blank=True)
 
     data_type = models.CharField(
         _("data type"),

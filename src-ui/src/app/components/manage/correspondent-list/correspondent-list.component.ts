@@ -4,6 +4,7 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms'
 import {
   NgbDropdownModule,
   NgbPaginationModule,
+  NgbPopoverModule,
 } from '@ng-bootstrap/ng-bootstrap'
 import { NgxBootstrapIconsModule } from 'ngx-bootstrap-icons'
 import { Correspondent } from 'src/app/data/correspondent'
@@ -33,6 +34,7 @@ import { ManagementListComponent } from '../management-list/management-list.comp
     NgTemplateOutlet,
     NgbDropdownModule,
     NgbPaginationModule,
+    NgbPopoverModule,
     NgxBootstrapIconsModule,
   ],
 })

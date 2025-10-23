@@ -89,6 +89,9 @@
         <div class="indicator"></div>
       }
       <button class="btn btn-link ms-0 ps-0 text-start" (click)="userCanEdit(object) ? openEditDialog(object) : null; $event.stopPropagation()">{{ object.name }}</button>
+      @if (object.remark) {
+        <i-bs name="info-circle" class="text-muted ms-1" style="cursor: pointer;" [ngbPopover]="object.remark" triggers="mouseenter:mouseleave" container="body"></i-bs>
+      }
     </td>
     <td scope="row" class="d-none d-sm-table-cell">{{ getMatching(object) }}</td>
     <td scope="row">{{ getDocumentCount(object) }}</td>

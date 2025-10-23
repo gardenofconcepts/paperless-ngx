@@ -27,6 +27,7 @@ import { UserService } from 'src/app/services/rest/user.service'
 import { SettingsService } from 'src/app/services/settings.service'
 import { SelectComponent } from '../../input/select/select.component'
 import { TextComponent } from '../../input/text/text.component'
+import { TextAreaComponent } from '../../input/textarea/textarea.component'
 import { EditDialogComponent, EditDialogMode } from '../edit-dialog.component'
 
 const SELECT_OPTION_PAGE_SIZE = 8
@@ -38,6 +39,7 @@ const SELECT_OPTION_PAGE_SIZE = 8
   imports: [
     SelectComponent,
     TextComponent,
+    TextAreaComponent,
     FormsModule,
     ReactiveFormsModule,
     NgbPaginationModule,
@@ -125,6 +127,7 @@ export class CustomFieldEditDialogComponent
   getForm(): FormGroup {
     return new FormGroup({
       name: new FormControl(null),
+      remark: new FormControl(''),
       data_type: new FormControl(null),
       extra_data: new FormGroup({
         select_options: new FormArray([]),
