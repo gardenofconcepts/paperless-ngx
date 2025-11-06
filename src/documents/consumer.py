@@ -786,27 +786,10 @@ class ConsumerPreflightPlugin(
 
     def pre_check_duplicate(self):
         """
-        Using the MD5 of the file, check this exact file doesn't already exist
+        Duplicate documents are now allowed.
+        This method is kept for backwards compatibility but performs no checks.
         """
-        with Path(self.input_doc.original_file).open("rb") as f:
-            checksum = hashlib.md5(f.read()).hexdigest()
-        existing_doc = Document.global_objects.filter(
-            Q(checksum=checksum) | Q(archive_checksum=checksum),
-        )
-        if existing_doc.exists():
-            msg = ConsumerStatusShortMessage.DOCUMENT_ALREADY_EXISTS
-            log_msg = f"Not consuming {self.filename}: It is a duplicate of {existing_doc.get().title} (#{existing_doc.get().pk})."
-
-            if existing_doc.first().deleted_at is not None:
-                msg = ConsumerStatusShortMessage.DOCUMENT_ALREADY_EXISTS_IN_TRASH
-                log_msg += " Note: existing document is in the trash."
-
-            if settings.CONSUMER_DELETE_DUPLICATES:
-                Path(self.input_doc.original_file).unlink()
-            self._fail(
-                msg,
-                log_msg,
-            )
+        pass
 
     def pre_check_directories(self):
         """
