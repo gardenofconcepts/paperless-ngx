@@ -1062,3 +1062,262 @@ class TestPDFActions(DirectoriesMixin, TestCase):
                 bulk_edit.edit_pdf(doc_ids, operations, update_document=True)
         mock_group.assert_not_called()
         mock_consume_file.assert_not_called()
+
+
+class TestCustomFieldInstanceOperations(DirectoriesMixin, TestCase):
+    """Test custom field instance-level add/remove with normalization and deduplication."""
+
+    def setUp(self):
+        super().setUp()
+        patcher = mock.patch("documents.bulk_edit.bulk_update_documents.delay")
+        self.async_task = patcher.start()
+        self.addCleanup(patcher.stop)
+
+        self.doc1 = Document.objects.create(checksum="A", title="A")
+        self.doc2 = Document.objects.create(checksum="B", title="B")
+
+        # Create custom fields of different types
+        self.cf_string = CustomField.objects.create(
+            name="string_field", data_type="string"
+        )
+        self.cf_int = CustomField.objects.create(name="int_field", data_type="integer")
+        self.cf_date = CustomField.objects.create(name="date_field", data_type="date")
+        self.cf_bool = CustomField.objects.create(
+            name="bool_field", data_type="boolean"
+        )
+        self.cf_select = CustomField.objects.create(
+            name="select_field",
+            data_type="select",
+            extra_data={
+                "select_options": [
+                    {"label": "Option A", "id": "opt_a"},
+                    {"label": "Option B", "id": "opt_b"},
+                ]
+            },
+        )
+        self.cf_doclink = CustomField.objects.create(
+            name="doclink_field", data_type="documentlink"
+        )
+        self.cf_json = CustomField.objects.create(
+            name="json_field", data_type="json"
+        )
+        self.cf_monetary = CustomField.objects.create(
+            name="monetary_field", data_type="monetary"
+        )
+
+    def test_add_custom_field_instances_string(self):
+        """Test adding multiple string field instances."""
+        bulk_edit.modify_custom_fields(
+            doc_ids=[self.doc1.id],
+            add_custom_fields=[],
+            remove_custom_fields=[],
+            add_custom_field_instances=[
+                {"field": self.cf_string.id, "value": "value_a"},
+                {"field": self.cf_string.id, "value": "value_b"},
+            ],
+        )
+
+        instances = CustomFieldInstance.objects.filter(
+            document=self.doc1, field=self.cf_string
+        ).order_by("created")
+        self.assertEqual(instances.count(), 2)
+        self.assertEqual(instances[0].value, "value_a")
+        self.assertEqual(instances[1].value, "value_b")
+
+    def test_add_custom_field_instances_deduplication_string(self):
+        """Test that duplicate instances within a request are skipped."""
+        # Pre-create one instance
+        CustomFieldInstance.objects.create(
+            document=self.doc1, field=self.cf_string, value_text="existing"
+        )
+
+        # Try to add: one new, one exact match to existing, one different
+        bulk_edit.modify_custom_fields(
+            doc_ids=[self.doc1.id],
+            add_custom_fields=[],
+            remove_custom_fields=[],
+            add_custom_field_instances=[
+                {"field": self.cf_string.id, "value": "existing"},  # duplicate
+                {"field": self.cf_string.id, "value": "new_value"},
+            ],
+        )
+
+        instances = CustomFieldInstance.objects.filter(
+            document=self.doc1, field=self.cf_string
+        ).order_by("created")
+        # Should have 2 total: existing + new_value (duplicate skipped)
+        self.assertEqual(instances.count(), 2)
+        values = [inst.value for inst in instances]
+        self.assertIn("existing", values)
+        self.assertIn("new_value", values)
+
+    def test_remove_custom_field_instance_by_value(self):
+        """Test removing a specific instance by field and value."""
+        # Create two instances with same field
+        inst1 = CustomFieldInstance.objects.create(
+            document=self.doc1, field=self.cf_string, value_text="to_keep"
+        )
+        inst2 = CustomFieldInstance.objects.create(
+            document=self.doc1, field=self.cf_string, value_text="to_remove"
+        )
+
+        bulk_edit.modify_custom_fields(
+            doc_ids=[self.doc1.id],
+            add_custom_fields=[],
+            remove_custom_fields=[],
+            remove_custom_field_instances=[
+                {"field": self.cf_string.id, "value": "to_remove"},
+            ],
+        )
+
+        instances = CustomFieldInstance.objects.filter(
+            document=self.doc1, field=self.cf_string
+        )
+        self.assertEqual(instances.count(), 1)
+        self.assertEqual(instances.first().value, "to_keep")
+
+    def test_normalization_documentlink(self):
+        """Test that document links are normalized (sorted, unique) for comparison."""
+        # Create instance with links in one order
+        inst1 = CustomFieldInstance.objects.create(
+            document=self.doc1,
+            field=self.cf_doclink,
+            value_document_ids=[3, 1, 2],
+        )
+
+        # Try to add with different order (but same set) - should dedupe
+        with mock.patch("documents.bulk_edit.reflect_doclinks"):
+            bulk_edit.modify_custom_fields(
+                doc_ids=[self.doc1.id],
+                add_custom_fields=[],
+                remove_custom_fields=[],
+                add_custom_field_instances=[
+                    {"field": self.cf_doclink.id, "value": [1, 2, 3]},
+                ],
+            )
+
+        instances = CustomFieldInstance.objects.filter(
+            document=self.doc1, field=self.cf_doclink
+        )
+        # Should still be 1 (dedup based on normalized value)
+        self.assertEqual(instances.count(), 1)
+
+    def test_normalization_json(self):
+        """Test that JSON is normalized (dicts with sorted keys) for comparison."""
+        # Create instance with JSON in one order
+        inst1 = CustomFieldInstance.objects.create(
+            document=self.doc1, field=self.cf_json, value_json={"b": 2, "a": 1}
+        )
+
+        # Try to add with same content but different order - should dedupe
+        bulk_edit.modify_custom_fields(
+            doc_ids=[self.doc1.id],
+            add_custom_fields=[],
+            remove_custom_fields=[],
+            add_custom_field_instances=[
+                {"field": self.cf_json.id, "value": {"a": 1, "b": 2}},
+            ],
+        )
+
+        instances = CustomFieldInstance.objects.filter(
+            document=self.doc1, field=self.cf_json
+        )
+        # Should still be 1 (dedup based on normalized JSON)
+        self.assertEqual(instances.count(), 1)
+
+    def test_normalization_monetary_currency_code(self):
+        """Test that monetary values are normalized (uppercase currency) for comparison."""
+        # Create instance with lowercase currency
+        inst1 = CustomFieldInstance.objects.create(
+            document=self.doc1, field=self.cf_monetary, value_monetary="usd100.50"
+        )
+
+        # Try to add with uppercase - should dedupe based on normalized comparison
+        bulk_edit.modify_custom_fields(
+            doc_ids=[self.doc1.id],
+            add_custom_fields=[],
+            remove_custom_fields=[],
+            add_custom_field_instances=[
+                {"field": self.cf_monetary.id, "value": "USD100.50"},
+            ],
+        )
+
+        instances = CustomFieldInstance.objects.filter(
+            document=self.doc1, field=self.cf_monetary
+        )
+        # Should still be 1 (dedup based on normalized currency code)
+        self.assertEqual(instances.count(), 1)
+
+    def test_processing_order_remove_then_add(self):
+        """Test that removal happens before addition in same request."""
+        # Create instance
+        CustomFieldInstance.objects.create(
+            document=self.doc1, field=self.cf_string, value_text="old_value"
+        )
+
+        bulk_edit.modify_custom_fields(
+            doc_ids=[self.doc1.id],
+            add_custom_fields=[],
+            remove_custom_fields=[],
+            remove_custom_field_instances=[
+                {"field": self.cf_string.id, "value": "old_value"},
+            ],
+            add_custom_field_instances=[
+                {"field": self.cf_string.id, "value": "new_value"},
+            ],
+        )
+
+        instances = CustomFieldInstance.objects.filter(
+            document=self.doc1, field=self.cf_string
+        )
+        self.assertEqual(instances.count(), 1)
+        self.assertEqual(instances.first().value, "new_value")
+
+    def test_mixing_old_and_new_formats(self):
+        """Test that old and new parameter formats work together."""
+        bulk_edit.modify_custom_fields(
+            doc_ids=[self.doc1.id],
+            add_custom_fields=[self.cf_int.id],  # old format, creates null value
+            remove_custom_fields=[],
+            add_custom_field_instances=[
+                {"field": self.cf_string.id, "value": "from_new_format"},
+            ],
+        )
+
+        # Should have both: one from old format (null int), one from new format
+        int_instances = CustomFieldInstance.objects.filter(
+            document=self.doc1, field=self.cf_int
+        )
+        string_instances = CustomFieldInstance.objects.filter(
+            document=self.doc1, field=self.cf_string
+        )
+
+        self.assertEqual(int_instances.count(), 1)
+        self.assertIsNone(int_instances.first().value)
+        self.assertEqual(string_instances.count(), 1)
+        self.assertEqual(string_instances.first().value, "from_new_format")
+
+    def test_collision_remove_field_wins_over_instance_remove(self):
+        """Test that field-level removal takes precedence over instance-level removal."""
+        # Create multiple instances
+        CustomFieldInstance.objects.create(
+            document=self.doc1, field=self.cf_string, value_text="value_a"
+        )
+        CustomFieldInstance.objects.create(
+            document=self.doc1, field=self.cf_string, value_text="value_b"
+        )
+
+        bulk_edit.modify_custom_fields(
+            doc_ids=[self.doc1.id],
+            add_custom_fields=[],
+            remove_custom_fields=[self.cf_string.id],  # remove entire field
+            remove_custom_field_instances=[
+                {"field": self.cf_string.id, "value": "value_a"},
+            ],
+        )
+
+        # All instances should be gone (field removal wins)
+        instances = CustomFieldInstance.objects.filter(
+            document=self.doc1, field=self.cf_string
+        )
+        self.assertEqual(instances.count(), 0)

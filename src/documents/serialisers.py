@@ -1558,13 +1558,31 @@ class BulkEditSerializer(
             raise serializers.ValidationError("remove_tags not specified")
 
     def _validate_parameters_modify_custom_fields(self, parameters):
+        # At least one of the four keys must be present
+        has_any = any(
+            key in parameters
+            for key in [
+                "add_custom_fields",
+                "remove_custom_fields",
+                "add_custom_field_instances",
+                "remove_custom_field_instances",
+            ]
+        )
+        if not has_any:
+            raise serializers.ValidationError(
+                "At least one of add_custom_fields, remove_custom_fields, "
+                "add_custom_field_instances, or remove_custom_field_instances must be specified"
+            )
+
+        # Validate classic params (old format, backwards compat)
         if "add_custom_fields" in parameters:
             self._validate_custom_field_id_list_or_dict(
                 parameters["add_custom_fields"],
                 "add_custom_fields",
             )
         else:
-            raise serializers.ValidationError("add_custom_fields not specified")
+            # Set default empty dict for classic params when not provided
+            parameters["add_custom_fields"] = {}
 
         if "remove_custom_fields" in parameters:
             self._validate_custom_field_id_list_or_dict(
@@ -1572,7 +1590,76 @@ class BulkEditSerializer(
                 "remove_custom_fields",
             )
         else:
-            raise serializers.ValidationError("remove_custom_fields not specified")
+            # Set default empty list for classic params when not provided
+            parameters["remove_custom_fields"] = []
+
+        # Validate instance-level params (new format)
+        if "add_custom_field_instances" in parameters:
+            self._validate_custom_field_instances(
+                parameters["add_custom_field_instances"],
+                "add_custom_field_instances",
+            )
+
+        if "remove_custom_field_instances" in parameters:
+            self._validate_custom_field_instances(
+                parameters["remove_custom_field_instances"],
+                "remove_custom_field_instances",
+            )
+
+    def _validate_custom_field_instances(self, instances, name="instances"):
+        """Validate a list of {field, value} instances."""
+        if not isinstance(instances, list):
+            raise serializers.ValidationError(f"{name} must be a list")
+
+        if len(instances) > 1000:
+            raise serializers.ValidationError(
+                f"{name} has too many items (max 1000)"
+            )
+
+        cfi_serializer = CustomFieldInstanceSerializer()
+        seen = set()
+
+        for idx, item in enumerate(instances):
+            if not isinstance(item, dict):
+                raise serializers.ValidationError(
+                    f"{name}[{idx}] must be a dict with 'field' and optional 'value'"
+                )
+            if "field" not in item:
+                raise serializers.ValidationError(
+                    f"{name}[{idx}] must have a 'field' key"
+                )
+
+            try:
+                field_id = int(item["field"])
+                # Normalize field ID to integer in the payload
+                item["field"] = field_id
+            except (TypeError, ValueError, KeyError):
+                raise serializers.ValidationError(
+                    f"{name}[{idx}]['field'] must be an integer"
+                )
+
+            try:
+                field = CustomField.objects.get(id=field_id)
+            except CustomField.DoesNotExist:
+                raise serializers.ValidationError(
+                    f"{name}[{idx}]: Custom field with id {field_id} does not exist"
+                )
+
+            value = item.get("value")
+            try:
+                cfi_serializer.validate({"field": field, "value": value})
+            except serializers.ValidationError as e:
+                raise serializers.ValidationError(
+                    f"{name}[{idx}]: {e.detail[0]}"
+                )
+
+            # Request-level dedup: reject duplicate {field, value} pairs
+            key = (field_id, str(value))
+            if key in seen:
+                raise serializers.ValidationError(
+                    f"{name}: duplicate {{field: {field_id}, value: {value}}}"
+                )
+            seen.add(key)
 
     def _validate_owner(self, owner):
         ownerUser = User.objects.get(pk=owner)

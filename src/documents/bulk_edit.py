@@ -202,71 +202,285 @@ def modify_tags(
     return "OK"
 
 
+def _normalize_value_for_comparison(field: CustomField, value):
+    """Normalize a value for equality comparison based on field type."""
+    if value is None:
+        return None
+    if field.data_type == CustomField.FieldDataType.DOCUMENTLINK:
+        # Normalize document links: sort and unique
+        if isinstance(value, list):
+            return tuple(sorted(set(value)))
+        return value
+    elif field.data_type == CustomField.FieldDataType.JSON:
+        # Normalize JSON: stringify with sorted keys for structural equality
+        import json
+        if isinstance(value, dict):
+            return json.dumps(value, sort_keys=True)
+        return json.dumps(value)
+    elif field.data_type == CustomField.FieldDataType.MONETARY:
+        # Normalize monetary: uppercase currency code
+        if isinstance(value, str):
+            if len(value) >= 3 and value[0:3].isalpha() and value[3] in "-0123456789":
+                return value[0:3].upper() + value[3:]
+        return value
+    else:
+        # String types, Date, Bool, Int, Float, Select: use as-is
+        return value
+
+
 def modify_custom_fields(
     doc_ids: list[int],
     add_custom_fields: list[int] | dict,
     remove_custom_fields: list[int],
+    *,
+    add_custom_field_instances: list[dict] | None = None,
+    remove_custom_field_instances: list[dict] | None = None,
 ) -> Literal["OK"]:
+    """
+    Modify custom fields on multiple documents.
+
+    Processing order:
+    1. Remove by instance
+    2. Remove by field ID (entire field)
+    3. Add by classic params (dict or list)
+    4. Add by instance (with deduplication)
+    """
     qs = Document.objects.filter(id__in=doc_ids).only("pk")
     affected_docs = list(qs.values_list("pk", flat=True))
-    # Ensure add_custom_fields is a list of tuples, supports old API
-    add_custom_fields = (
-        add_custom_fields.items()
-        if isinstance(add_custom_fields, dict)
-        else [(field, None) for field in add_custom_fields]
-    )
 
-    custom_fields = CustomField.objects.filter(
-        id__in=[int(field) for field, _ in add_custom_fields],
-    ).distinct()
-    for field_id, value in add_custom_fields:
+    if not affected_docs:
+        return "OK"
+
+    # Normalize classic add params
+    if isinstance(add_custom_fields, dict):
+        # Convert string keys to integers
+        add_custom_fields_normalized = [
+            (int(field_id), value) for field_id, value in add_custom_fields.items()
+        ]
+    else:
+        add_custom_fields_normalized = [(field, None) for field in add_custom_fields]
+
+    # Fetch all custom field definitions we'll need
+    all_field_ids = set(int(field) for field, _ in add_custom_fields_normalized)
+    if add_custom_field_instances:
+        all_field_ids.update(item["field"] for item in add_custom_field_instances)
+    if remove_custom_field_instances:
+        all_field_ids.update(item["field"] for item in remove_custom_field_instances)
+    all_field_ids.update(remove_custom_fields or [])
+
+    custom_fields_map = {
+        f.id: f for f in CustomField.objects.filter(id__in=all_field_ids)
+    }
+
+    # Build lookup of existing instances for deduplication
+    # Key: (doc_id, field_id, normalized_value_repr)
+    existing_instances_qs = CustomFieldInstance.objects.filter(
+        document_id__in=affected_docs,
+        field_id__in=all_field_ids,
+    ).select_related("field")
+
+    existing_lookup = {}
+    for inst in existing_instances_qs:
+        normalized = _normalize_value_for_comparison(inst.field, inst.value)
+        key = (inst.document_id, inst.field_id, normalized)
+        existing_lookup[key] = inst
+
+    # Step 1: Remove by instance (exact field + value match)
+    if remove_custom_field_instances:
+        for item in remove_custom_field_instances:
+            field_id = item["field"]
+            value = item.get("value")
+            field_obj = custom_fields_map.get(field_id)
+            if not field_obj:
+                continue
+
+            normalized = _normalize_value_for_comparison(field_obj, value)
+
+            for doc_id in affected_docs:
+                # Find and delete matching instance(s)
+                instances_to_delete = CustomFieldInstance.objects.filter(
+                    document_id=doc_id,
+                    field_id=field_id,
+                )
+
+                for inst in instances_to_delete:
+                    inst_normalized = _normalize_value_for_comparison(
+                        field_obj, inst.value
+                    )
+                    if inst_normalized == normalized:
+                        # Remove symmetrical doclinks if needed
+                        if (
+                            field_obj.data_type == CustomField.FieldDataType.DOCUMENTLINK
+                            and inst.value
+                        ):
+                            doc = Document.objects.get(id=doc_id)
+                            for target_doc_id in inst.value:
+                                remove_doclink(doc, field_obj, target_doc_id)
+
+                        inst.hard_delete()
+                        # Remove from lookup
+                        key = (doc_id, field_id, inst_normalized)
+                        existing_lookup.pop(key, None)
+
+    # Step 2: Remove by field ID (remove all instances of the field)
+    if remove_custom_fields:
+        # Remove symmetrical doclinks first
+        for doclink_inst in CustomFieldInstance.objects.filter(
+            document_id__in=affected_docs,
+            field_id__in=remove_custom_fields,
+            field__data_type=CustomField.FieldDataType.DOCUMENTLINK,
+            value_document_ids__isnull=False,
+        ):
+            for target_doc_id in doclink_inst.value:
+                remove_doclink(
+                    Document.objects.get(id=doclink_inst.document_id),
+                    doclink_inst.field,
+                    target_doc_id,
+                )
+
+        # Delete all instances for these fields
+        CustomFieldInstance.objects.filter(
+            document_id__in=affected_docs,
+            field_id__in=remove_custom_fields,
+        ).hard_delete()
+
+        # Clear lookup for these fields
+        keys_to_remove = [
+            k for k in existing_lookup
+            if k[1] in remove_custom_fields
+        ]
+        for k in keys_to_remove:
+            existing_lookup.pop(k)
+
+    # Step 3: Add by classic params (single instance per field)
+    # For classic params, we replace all instances with a single new one
+    for field_id, value in add_custom_fields_normalized:
+        field_obj = custom_fields_map.get(field_id)
+        if not field_obj:
+            continue
+
         for doc_id in affected_docs:
-            defaults = {}
-            custom_field = custom_fields.get(id=field_id)
-            if custom_field:
-                value_field = CustomFieldInstance.TYPE_TO_DATA_STORE_NAME_MAP[
-                    custom_field.data_type
-                ]
-                defaults[value_field] = value
+            # Remove all existing instances for this field on this doc
+            # (to handle multiple instances that may exist)
+            existing_instances = CustomFieldInstance.objects.filter(
+                document_id=doc_id,
+                field_id=field_id,
+            )
+
+            # Handle doclink removal first
+            for inst in existing_instances:
                 if (
-                    custom_field.data_type == CustomField.FieldDataType.DOCUMENTLINK
+                    field_obj.data_type == CustomField.FieldDataType.DOCUMENTLINK
+                    and inst.value
+                ):
+                    doc = Document.objects.get(id=doc_id)
+                    for target_doc_id in inst.value:
+                        remove_doclink(doc, field_obj, target_doc_id)
+
+            existing_instances.hard_delete()
+
+            # Clear lookup for this field/doc
+            keys_to_remove = [
+                k for k in existing_lookup
+                if k[0] == doc_id and k[1] == field_id
+            ]
+            for k in keys_to_remove:
+                existing_lookup.pop(k)
+
+            # Now create the new single instance
+            defaults = {}
+            value_field = CustomFieldInstance.TYPE_TO_DATA_STORE_NAME_MAP[
+                field_obj.data_type
+            ]
+            defaults[value_field] = value
+
+            # Prevent self-linking
+            if (
+                field_obj.data_type == CustomField.FieldDataType.DOCUMENTLINK
+                and value
+                and doc_id in value
+            ):
+                continue
+
+            CustomFieldInstance.objects.create(
+                document_id=doc_id,
+                field_id=field_id,
+                **defaults,
+            )
+
+            # Update lookup
+            normalized = _normalize_value_for_comparison(field_obj, value)
+            key = (doc_id, field_id, normalized)
+            existing_lookup[key] = True  # Mark as now existing
+
+            # Reflect doclinks
+            if field_obj.data_type == CustomField.FieldDataType.DOCUMENTLINK:
+                doc = Document.objects.get(id=doc_id)
+                reflect_doclinks(doc, field_obj, value)
+
+    # Step 4: Add by instance (with deduplication)
+    if add_custom_field_instances:
+        instances_to_create = []
+
+        for item in add_custom_field_instances:
+            field_id = item["field"]
+            value = item.get("value")
+            field_obj = custom_fields_map.get(field_id)
+            if not field_obj:
+                continue
+
+            normalized = _normalize_value_for_comparison(field_obj, value)
+
+            for doc_id in affected_docs:
+                key = (doc_id, field_id, normalized)
+
+                # Skip if already exists (dedupe)
+                if key in existing_lookup:
+                    logger.debug(
+                        f"Skipping duplicate custom field instance: "
+                        f"doc={doc_id}, field={field_id}, normalized_value={normalized}"
+                    )
+                    continue
+
+                # Prevent self-linking
+                if (
+                    field_obj.data_type == CustomField.FieldDataType.DOCUMENTLINK
                     and value
                     and doc_id in value
                 ):
-                    # Prevent self-linking
                     continue
-            CustomFieldInstance.objects.update_or_create(
-                document_id=doc_id,
-                field_id=field_id,
-                defaults=defaults,
-            )
-            if custom_field.data_type == CustomField.FieldDataType.DOCUMENTLINK:
-                doc = Document.objects.get(id=doc_id)
-                reflect_doclinks(doc, custom_field, value)
 
-    # For doc link fields that are being removed, remove symmetrical links
-    for doclink_being_removed_instance in CustomFieldInstance.objects.filter(
-        document_id__in=affected_docs,
-        field__id__in=remove_custom_fields,
-        field__data_type=CustomField.FieldDataType.DOCUMENTLINK,
-        value_document_ids__isnull=False,
-    ):
-        for target_doc_id in doclink_being_removed_instance.value:
-            remove_doclink(
-                document=Document.objects.get(
-                    id=doclink_being_removed_instance.document.id,
-                ),
-                field=doclink_being_removed_instance.field,
-                target_doc_id=target_doc_id,
-            )
+                value_field = CustomFieldInstance.TYPE_TO_DATA_STORE_NAME_MAP[
+                    field_obj.data_type
+                ]
+                instances_to_create.append(
+                    CustomFieldInstance(
+                        document_id=doc_id,
+                        field_id=field_id,
+                        **{value_field: value},
+                    )
+                )
 
-    # Finally, remove the custom fields
-    CustomFieldInstance.objects.filter(
-        document_id__in=affected_docs,
-        field_id__in=remove_custom_fields,
-    ).hard_delete()
+                # Mark as now existing
+                existing_lookup[key] = True
 
-    bulk_update_documents.delay(document_ids=affected_docs)
+        # Bulk create new instances
+        if instances_to_create:
+            CustomFieldInstance.objects.bulk_create(instances_to_create)
+
+            # Reflect doclinks for newly added instances
+            for inst in instances_to_create:
+                field_obj = custom_fields_map.get(inst.field_id)
+                if (
+                    field_obj
+                    and field_obj.data_type == CustomField.FieldDataType.DOCUMENTLINK
+                    and inst.value
+                ):
+                    doc = Document.objects.get(id=inst.document_id)
+                    reflect_doclinks(doc, field_obj, inst.value)
+
+    if affected_docs:
+        bulk_update_documents.delay(document_ids=affected_docs)
 
     return "OK"
 

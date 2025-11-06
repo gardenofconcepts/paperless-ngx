@@ -316,10 +316,14 @@ The following methods are supported:
         -   `"pages": [..]` The list should be a list of integers e.g. `"[2,3,4]"`
     -   The delete_pages operation only accepts a single document.
 -   `modify_custom_fields`
-    -   Requires `parameters`:
-        -   `"add_custom_fields": { CUSTOM_FIELD_ID: VALUE }`: JSON object consisting of custom field id:value pairs to add to the document, can also be a list of custom field IDs
-            to add with empty values.
-        -   `"remove_custom_fields": [CUSTOM_FIELD_ID]`: custom field ids to remove from the document.
+    -   Requires at least one of the following in `parameters`:
+        -   `"add_custom_fields": { CUSTOM_FIELD_ID: VALUE }` or `[CUSTOM_FIELD_ID, ...]`: Add custom field values (single instance per field). Dict format pairs field ID to value; list format creates instances with empty values.
+        -   `"remove_custom_fields": [CUSTOM_FIELD_ID]`: Remove all instances of these custom fields.
+        -   `"add_custom_field_instances": [{"field": CUSTOM_FIELD_ID, "value": VALUE}, ...]`: Add multiple instances of the same custom field (supports duplicates of same field). Values are deduplicated against existing instances.
+        -   `"remove_custom_field_instances": [{"field": CUSTOM_FIELD_ID, "value": VALUE}, ...]`: Remove specific instances matching exact field and value.
+    -   All four parameters can be mixed in a single request. Processing order: 1) remove by instance, 2) remove by field, 3) add by classic params, 4) add by instances.
+    -   Instance deduplication: Identical instances within a request are rejected. Values are compared using type-specific normalization (e.g., sorted unique lists for document links, uppercased currency for monetary).
+    -   For detailed normalization rules and examples, see the [Custom fields](/docs/custom_field.md#bulk-edit-custom-fields) documentation.
 
 ### Objects
 
