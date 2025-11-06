@@ -727,56 +727,73 @@ class TestConsumer(
 
     @override_settings(CONSUMER_DELETE_DUPLICATES=True)
     def test_delete_duplicate(self):
+        """
+        Test that duplicate documents are now allowed to be consumed.
+        The CONSUMER_DELETE_DUPLICATES setting is now ignored since duplicates are always allowed.
+        """
         dst = self.get_test_file()
         self.assertIsFile(dst)
 
         with self.get_consumer(dst) as consumer:
             consumer.run()
 
-            document = Document.objects.first()
+            document1 = Document.objects.first()
 
         self._assert_first_last_send_progress()
 
         self.assertIsNotFile(dst)
-        self.assertIsNotNone(document)
+        self.assertIsNotNone(document1)
 
         dst = self.get_test_file()
         self.assertIsFile(dst)
 
-        with self.assertRaises(ConsumerError):
-            with self.get_consumer(dst) as consumer:
-                consumer.run()
+        # Duplicates are now allowed, so this should succeed
+        with self.get_consumer(dst) as consumer:
+            consumer.run()
+
+            document2 = Document.objects.filter().order_by("-pk").first()
 
         self.assertIsNotFile(dst)
-        self._assert_first_last_send_progress(last_status="FAILED")
+        self._assert_first_last_send_progress()
+        self.assertIsNotNone(document2)
+        # Verify we have two documents with the same checksum
+        self.assertEqual(document1.checksum, document2.checksum)
+        self.assertNotEqual(document1.pk, document2.pk)
 
     @override_settings(CONSUMER_DELETE_DUPLICATES=False)
     def test_no_delete_duplicate(self):
+        """
+        Test that duplicate documents are now allowed to be consumed.
+        The CONSUMER_DELETE_DUPLICATES setting is now ignored since duplicates are always allowed.
+        """
         dst = self.get_test_file()
         self.assertIsFile(dst)
 
         with self.get_consumer(dst) as consumer:
             consumer.run()
 
-            document = Document.objects.first()
+            document1 = Document.objects.first()
 
         self._assert_first_last_send_progress()
 
         self.assertIsNotFile(dst)
-        self.assertIsNotNone(document)
+        self.assertIsNotNone(document1)
 
         dst = self.get_test_file()
         self.assertIsFile(dst)
 
-        with self.assertRaisesRegex(
-            ConsumerError,
-            r"sample\.pdf: Not consuming sample\.pdf: It is a duplicate of sample \(#\d+\)",
-        ):
-            with self.get_consumer(dst) as consumer:
-                consumer.run()
+        # Duplicates are now allowed, so this should succeed
+        with self.get_consumer(dst) as consumer:
+            consumer.run()
 
-        self.assertIsFile(dst)
-        self._assert_first_last_send_progress(last_status="FAILED")
+            document2 = Document.objects.filter().order_by("-pk").first()
+
+        self.assertIsNotFile(dst)
+        self._assert_first_last_send_progress()
+        self.assertIsNotNone(document2)
+        # Verify we have two documents with the same checksum
+        self.assertEqual(document1.checksum, document2.checksum)
+        self.assertNotEqual(document1.pk, document2.pk)
 
     @override_settings(FILENAME_FORMAT="{title}")
     @mock.patch("documents.parsers.document_consumer_declaration.send")
