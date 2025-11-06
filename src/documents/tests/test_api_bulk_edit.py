@@ -406,6 +406,139 @@ class TestBulkEditAPI(DirectoriesMixin, APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         m.assert_not_called()
 
+    @mock.patch("documents.serialisers.bulk_edit.modify_custom_fields")
+    def test_api_modify_custom_fields_add_instances(self, m):
+        """Test adding multiple instances of the same custom field."""
+        self.setup_mock(m, "modify_custom_fields")
+        response = self.client.post(
+            "/api/documents/bulk_edit/",
+            json.dumps(
+                {
+                    "documents": [self.doc1.id],
+                    "method": "modify_custom_fields",
+                    "parameters": {
+                        "add_custom_field_instances": [
+                            {"field": self.cf1.id, "value": "valueA"},
+                            {"field": self.cf1.id, "value": "valueB"},
+                        ],
+                        "remove_custom_field_instances": [],
+                    },
+                },
+            ),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        m.assert_called_once()
+        args, kwargs = m.call_args
+        self.assertListEqual(args[0], [self.doc1.id])
+        self.assertEqual(
+            kwargs["add_custom_field_instances"],
+            [
+                {"field": self.cf1.id, "value": "valueA"},
+                {"field": self.cf1.id, "value": "valueB"},
+            ],
+        )
+        self.assertEqual(kwargs["remove_custom_field_instances"], [])
+
+    @mock.patch("documents.serialisers.bulk_edit.modify_custom_fields")
+    def test_api_modify_custom_fields_remove_instance(self, m):
+        """Test removing a specific instance by field and value."""
+        self.setup_mock(m, "modify_custom_fields")
+        response = self.client.post(
+            "/api/documents/bulk_edit/",
+            json.dumps(
+                {
+                    "documents": [self.doc1.id],
+                    "method": "modify_custom_fields",
+                    "parameters": {
+                        "add_custom_field_instances": [],
+                        "remove_custom_field_instances": [
+                            {"field": self.cf1.id, "value": 42},
+                        ],
+                    },
+                },
+            ),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        m.assert_called_once()
+        args, kwargs = m.call_args
+        self.assertListEqual(args[0], [self.doc1.id])
+        self.assertEqual(
+            kwargs["remove_custom_field_instances"],
+            [{"field": self.cf1.id, "value": 42}],
+        )
+        self.assertEqual(kwargs["add_custom_field_instances"], [])
+
+    def test_api_modify_custom_fields_deduplication(self):
+        """Test that sending identical instances twice results in error (request-level dedup)."""
+        # Request should be rejected if duplicate instances in single request
+        response = self.client.post(
+            "/api/documents/bulk_edit/",
+            json.dumps(
+                {
+                    "documents": [self.doc1.id],
+                    "method": "modify_custom_fields",
+                    "parameters": {
+                        "add_custom_field_instances": [
+                            {"field": self.cf1.id, "value": "same"},
+                            {"field": self.cf1.id, "value": "same"},
+                        ],
+                        "remove_custom_field_instances": [],
+                    },
+                },
+            ),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_api_modify_custom_fields_requires_at_least_one_param(self):
+        """Test that at least one of the four parameters is required."""
+        response = self.client.post(
+            "/api/documents/bulk_edit/",
+            json.dumps(
+                {
+                    "documents": [self.doc1.id],
+                    "method": "modify_custom_fields",
+                    "parameters": {},
+                },
+            ),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    @mock.patch("documents.serialisers.bulk_edit.modify_custom_fields")
+    def test_api_modify_custom_fields_mixed_params(self, m):
+        """Test mixing old and new parameter formats."""
+        self.setup_mock(m, "modify_custom_fields")
+        response = self.client.post(
+            "/api/documents/bulk_edit/",
+            json.dumps(
+                {
+                    "documents": [self.doc1.id],
+                    "method": "modify_custom_fields",
+                    "parameters": {
+                        "add_custom_fields": {self.cf1.id: "oldFormat"},
+                        "remove_custom_fields": [self.cf2.id],
+                        "add_custom_field_instances": [
+                            {"field": self.cf1.id, "value": "newFormat"}
+                        ],
+                        "remove_custom_field_instances": [],
+                    },
+                },
+            ),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        m.assert_called_once()
+        args, kwargs = m.call_args
+        self.assertEqual(kwargs["add_custom_fields"], {str(self.cf1.id): "oldFormat"})
+        self.assertEqual(kwargs["remove_custom_fields"], [self.cf2.id])
+        self.assertEqual(
+            kwargs["add_custom_field_instances"],
+            [{"field": self.cf1.id, "value": "newFormat"}],
+        )
+
     @mock.patch("documents.serialisers.bulk_edit.delete")
     def test_api_delete(self, m):
         self.setup_mock(m, "delete")
